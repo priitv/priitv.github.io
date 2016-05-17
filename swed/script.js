@@ -63,6 +63,7 @@ function onCheckboxClicked(box, month, transferPos) {
 }
 
 function drawTable() {
+	if (isEmpty(smth)) return;
 	var arr = getChartData();
 	drawChart(arr);
 	
@@ -108,6 +109,15 @@ function getChartData() {
 	}
 	if (skipEnd > 0) chartData.splice(-skipEnd, skipEnd);
 	return chartData;
+}
+
+function isEmpty(obj) {
+    if (obj == null) return true;
+    if (obj.length > 0)    return false;
+    for (var key in obj) {
+        if (hasOwnProperty.call(obj, key)) return false;
+    }
+    return true;
 }
 
 function calcAvarage(numbersList) {
