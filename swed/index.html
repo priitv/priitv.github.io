@@ -1,0 +1,35 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Tje</title>
+	<meta name="description" content="je">
+	<meta name="author" content="blah">
+	<link rel="stylesheet" href="css/styles.css?v=1.0">
+	<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+	<!--[if lt IE 9]>
+		<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+</head>
+
+<body>
+	<input type="file" id="fileinput" multiple/><br />
+	<table>
+	<tr><td>Skip from start:</td><td><input style="width:50px;text-align:center;" type="number" id="skipStart" value="0"></td></tr>
+	<tr><td>Skip from end:</td><td><input style="width:50px;text-align:center;" type="number" id="skipEnd" value="0"></td></tr>
+	<tr><td>Start counting from day:</td><td><input style="width:50px;text-align:center;" type="number" id="countStartDay" value="7"></td></tr>
+	<tr><td>Warn outgoings below:</td><td><input style="width:50px;text-align:center;" type="number" id="badNumberBelow" value="-20"></td></tr>
+	<tr><td>Exclude counting outgoings below:</td><td><input style="width:50px;text-align:center;" type="number" id="excludeByDefault" value="-60"></td></tr>
+	<tr><td>Include in counting:</td><td><input style="width:450px;" type="text" id="whiteList" value="FALGER INVEST|PROGRESSIVE INVEST|www.ovh.com">(Separate by |)</td></tr>
+	<tr><td>Show in lunch counts:</td><td><input style="width:450px;" type="text" id="lunchList" value="CAMPUS EVENTS|KOHVIK METS|HELIOS SÖÖGITUBA|RAHVATOIT">(Separate by |)</td></tr>
+	</table>
+	<div id="curve_chart" style="width: 100%; height: 500px"></div>
+	<pre>
+		<div id="tere"></div>
+	</pre>
+	<script src="script.js"></script>
+	<script type="text/javascript">
+	</script>
+</body>
+</html>
