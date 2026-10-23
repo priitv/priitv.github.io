@@ -1,0 +1,917 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Metsamaja Shell Cost</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a drafting-sheet tool — inputs column on the left, result + charts + editable bill of materials on the right; stacks on phones. */
+:root {
+  --bg: #f3f5f2;
+  --panel: #fbfcfa;
+  --ink: #17201c;
+  --ink-2: #4a5550;
+  --ink-3: #7b8580;
+  --rule: #d9dfda;
+  --accent: #1f5c4a;
+  --accent-soft: #dcebe4;
+  --chip: #eef1ed;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6;
+  --f-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141917; --panel: #1b211e; --ink: #e9eee9; --ink-2: #b6c0ba; --ink-3: #85908a; --rule: #2f3833;
+  --accent: #6cc3a3; --accent-soft: #233a31; --chip: #232a26;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #141917; --panel: #1b211e; --ink: #e9eee9; --ink-2: #b6c0ba; --ink-3: #85908a; --rule: #2f3833;
+  --accent: #6cc3a3; --accent-soft: #233a31; --chip: #232a26;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 24px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 20px; }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: 34px; letter-spacing: .01em; margin: 0; text-wrap: balance; }
+h1 span { color: var(--accent); }
+.sub { color: var(--ink-2); margin: 2px 0 0; max-width: 62ch; }
+h2 { font-family: var(--f-display); font-weight: 600; font-size: 15px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 10px; }
+.grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 16px; min-width: 0; }
+.main { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+.field { display: grid; grid-template-columns: 1fr 86px; gap: 4px 10px; align-items: center; padding: 8px 0; border-top: 1px dashed var(--rule); }
+.field:first-of-type { border-top: 0; }
+.field label { font-weight: 500; font-size: 14px; }
+.field small { grid-column: 1 / -1; color: var(--ink-3); font-size: 12px; margin-top: -2px; }
+.field input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+input[type=number] { width: 100%; font: 500 14px var(--f-mono); color: var(--ink); background: var(--bg); border: 1px solid var(--rule); border-radius: 4px; padding: 5px 6px; text-align: right; }
+input[type=number]:focus-visible, button:focus-visible, input[type=checkbox]:focus-visible, input[type=radio]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+button.chipbtn { font: 500 13px var(--f-mono); background: var(--chip); color: var(--ink); border: 1px solid var(--rule); border-radius: 4px; padding: 5px 8px; cursor: pointer; }
+button.chipbtn:hover { border-color: var(--accent); }
+button.chipbtn[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; margin: 6px 0 4px; }
+.seg.seg4 { grid-template-columns: repeat(4, 1fr); font-family: var(--f-mono); }
+.seg.seg4 label { font-size: 13px; }
+.seg label + label { border-left: 1px solid var(--rule); }
+.seg label { text-align: center; padding: 6px; cursor: pointer; font-size: 14px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg input:checked + span { font-weight: 600; }
+.seg label:has(input:checked) { background: var(--accent-soft); color: var(--ink); }
+.toggle { display: flex; gap: 8px; align-items: flex-start; padding: 8px 0; border-top: 1px dashed var(--rule); font-size: 14px; }
+.toggle input { margin-top: 3px; accent-color: var(--accent); }
+.toggle small { display: block; color: var(--ink-3); font-size: 12px; }
+.group-h { font-family: var(--f-display); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: 13px; color: var(--accent); margin: 16px 0 2px; }
+.reset { margin-top: 14px; width: 100%; }
+
+.hero { display: grid; grid-template-columns: auto 1fr; gap: 8px 28px; align-items: end; }
+@media (max-width: 560px) { .hero { grid-template-columns: 1fr; } }
+.total { font-family: var(--f-display); font-weight: 700; font-size: 56px; line-height: 1; font-variant-numeric: tabular-nums; }
+.total-l { font-size: 13px; color: var(--ink-2); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+.stat b { display: block; font: 500 18px var(--f-mono); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; }
+.check { margin-top: 12px; font-size: 13px; color: var(--ink-2); }
+.check b { font-family: var(--f-mono); font-weight: 500; }
+
+.stackbar { display: flex; gap: 2px; height: 22px; margin: 18px 0 10px; }
+.stackbar div { height: 100%; min-width: 2px; }
+.stackbar div:first-child { border-radius: 4px 0 0 4px; } .stackbar div:last-child { border-radius: 0 4px 4px 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--ink-2); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.legend b { font: 500 13px var(--f-mono); color: var(--ink); margin-left: 4px; }
+
+.chartbox { position: relative; overflow-x: auto; }
+svg text { font-family: var(--f-mono); font-size: 11px; fill: var(--ink-3); }
+svg .gridl { stroke: var(--rule); stroke-width: 1; }
+.tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--rule); border-radius: 5px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgb(0 0 0 / .15); min-width: 190px; z-index: 5; }
+.tip h4 { margin: 0 0 4px; font: 600 14px var(--f-display); letter-spacing: .03em; }
+.tip .r { display: flex; justify-content: space-between; gap: 12px; font-family: var(--f-mono); }
+.tip .r i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+.note { font-size: 13px; color: var(--ink-3); margin: 8px 0 0; }
+
+.bom { width: 100%; border-collapse: collapse; font-size: 14px; }
+.bomwrap { overflow-x: auto; }
+.bom th { text-align: left; font-weight: 500; font-size: 12px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; padding: 6px 8px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+.bom td { padding: 5px 8px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+.bom td.num, .bom th.num { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bom tr.sec td { background: var(--chip); font-family: var(--f-display); font-weight: 600; font-size: 15px; letter-spacing: .03em; border-bottom: 1px solid var(--rule); }
+.bom tr.sec td .src { font: 400 12px var(--f-mono); color: var(--ink-3); margin-left: 8px; letter-spacing: 0; }
+.bom tr.sec td i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; }
+.bom tr.off td:not(:first-child) { color: var(--ink-3); text-decoration: line-through; }
+.bom tr.off td input { text-decoration: none; }
+.bom td input[type=number] { width: 84px; }
+.bom td.n { min-width: 200px; }
+.bom td.n small { color: var(--ink-3); display: block; font-size: 12px; }
+.v3head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.v3head h2 { margin: 0; }
+.v3ctl { display: flex; gap: 12px; align-items: center; font-size: 14px; }
+.v3ctl input { accent-color: var(--accent); vertical-align: -2px; }
+.v3grid { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 14px; }
+@media (max-width: 760px) { .v3grid { grid-template-columns: minmax(0, 1fr); } }
+.v3box { position: relative; min-width: 0; }
+#v3d { height: 500px; border-radius: 4px; overflow: hidden; background: var(--bg); }
+@media (max-width: 760px) { #v3d { height: 360px; } }
+#v3d canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.lyrs { max-height: 500px; overflow: auto; font-size: 13px; min-width: 0; }
+.lyrs .gh { font-family: var(--f-display); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; color: var(--accent); margin: 10px 0 2px 6px; }
+.lyrs .gh:first-child { margin-top: 0; }
+.lyr { display: grid; grid-template-columns: 22px 12px 1fr; gap: 6px; align-items: start; width: 100%; text-align: left; background: none; border: 0; border-radius: 4px; padding: 4px 6px; color: var(--ink); font: inherit; cursor: pointer; }
+.lyr:hover { background: var(--chip); }
+.lyr[aria-pressed=true] { background: var(--accent-soft); }
+.lyr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.lyr b { font: 500 11px var(--f-mono); color: var(--ink-3); padding-top: 2px; }
+.lyr i { width: 12px; height: 12px; border-radius: 2px; margin-top: 3px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .18); }
+.lyr small { display: block; color: var(--ink-3); font-size: 12px; }
+.vs { margin: 14px 0 0; font-size: 14px; color: var(--ink-2); }
+.vs b { font: 500 14px var(--f-mono); color: var(--ink); }
+.bom tr.grp td { font-size: 12px; color: var(--ink-2); text-transform: uppercase; letter-spacing: .06em; padding-top: 10px; border-bottom: 1px dashed var(--rule); }
+.est { font: 500 10px var(--f-mono); text-transform: uppercase; letter-spacing: .06em; background: var(--accent-soft); color: var(--ink); padding: 1px 5px; border-radius: 3px; margin-left: 6px; vertical-align: 1px; }
+@media (prefers-reduced-motion: no-preference) { .stackbar div { transition: flex-grow .25s ease; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Metsamaja <span>·</span> shell cost</h1>
+      <p class="sub">Material cost for the weatherproof shell, from the rates in <i>metsamaja.xlsx</i> (fibo, floor, roof, facade tabs). No labour. Change the size and everything rescales.</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <aside class="panel" aria-label="House parameters">
+      <h2>House</h2>
+      <div class="presets" id="presets"></div>
+
+      <div class="field"><label for="L">Length, m</label><input type="number" id="L" step="0.1" min="4" max="30"><input type="range" id="Lr" min="4" max="25" step="0.1" aria-label="Length slider"></div>
+      <div class="field"><label for="W">Width, m</label><input type="number" id="W" step="0.1" min="4" max="20"><input type="range" id="Wr" min="4" max="14" step="0.1" aria-label="Width slider"></div>
+      <div class="field"><label for="H">Wall height, m</label><input type="number" id="H" step="0.1" min="2" max="6"><small>fibo + facade tabs use 2.8; parameters tab has 2.5</small></div>
+      <div class="field"><label for="pitch">Roof pitch, °</label><input type="number" id="pitch" step="1" min="0" max="60"><input type="range" id="pitchr" min="0" max="60" step="1" aria-label="Roof pitch slider"></div>
+      <div class="field"><label for="ov">Roof overhang, m</label><input type="number" id="ov" step="0.05" min="0" max="1.5"><small>per side; sheet uses 0.5 (roof 1 m longer and wider)</small></div>
+
+      <div class="group-h">Exterior walls</div>
+      <div class="seg" role="radiogroup" aria-label="Wall system">
+        <label><input type="radio" name="walls" id="wallsF" value="fibo"><span>Fibo blocks</span></label>
+        <label><input type="radio" name="walls" id="wallsW" value="wood"><span>Timber frame</span></label>
+      </div>
+      <div class="seg seg4" role="radiogroup" aria-label="Wall insulation thickness">
+        <label><input type="radio" name="wt" id="wt100" value="100"><span>100</span></label>
+        <label><input type="radio" name="wt" id="wt150" value="150"><span>150</span></label>
+        <label><input type="radio" name="wt" id="wt200" value="200"><span>200</span></label>
+        <label><input type="radio" name="wt" id="wt250" value="250"><span>250</span></label>
+      </div>
+      <p class="note" id="wallnote" style="margin:2px 0 4px"></p>
+
+      <div class="group-h">Floor</div>
+      <div class="seg" role="radiogroup" aria-label="Floor type">
+        <label><input type="radio" name="floor" id="floorC" value="concrete"><span>Concrete slab</span></label>
+        <label><input type="radio" name="floor" id="floorW" value="wood"><span>Wooden floor</span></label>
+      </div>
+
+      <div class="group-h">Foundation</div>
+      <div class="field"><label for="fwH">Foundation wall height, m</label><input type="number" id="fwH" step="0.1" min="0" max="3"></div>
+      <label class="toggle"><input type="checkbox" id="inner"><span>Inner walls<small>fibo 100 mm or a timber stud frame, matching the wall system</small></span></label>
+      <div class="field"><label for="part">Inner walls, running m</label><input type="number" id="part" step="1" min="0" max="80"></div>
+
+      <div class="group-h">Not in your summary</div>
+      <label class="toggle"><input type="checkbox" id="gables"><span>Clad the gable triangles<small>facade tab counts only perimeter × wall height</small></span></label>
+      <label class="toggle"><input type="checkbox" id="openings"><span>Windows &amp; exterior doors<small>window price from your shoppinglist, door price a guess</small></span></label>
+      <div class="field"><label for="winPct">Window area, % of floor</label><input type="number" id="winPct" step="1" min="0" max="40"></div>
+      <div class="field"><label for="doors">Exterior doors</label><input type="number" id="doors" step="1" min="0" max="6"></div>
+      <div class="field"><label for="res">Reserve / waste, %</label><input type="number" id="res" step="1" min="0" max="50"><small>applied on top of everything above</small></div>
+
+      <button class="chipbtn reset" id="reset" type="button">Reset to sheet values</button>
+    </aside>
+
+    <div class="main">
+      <section class="panel" aria-label="Estimate">
+        <div class="hero">
+          <div>
+            <div class="total-l">Shell materials</div>
+            <div class="total" id="total">€0</div>
+          </div>
+          <div class="stats" id="stats"></div>
+        </div>
+        <p class="vs" id="vs"></p>
+        <div class="stackbar" id="stackbar" aria-hidden="true"></div>
+        <div class="legend" id="legend"></div>
+        <p class="check" id="check"></p>
+      </section>
+
+      <section class="panel" aria-label="3D layers">
+        <div class="v3head">
+          <h2>Layers in 3D</h2>
+          <div class="v3ctl">
+            <label for="cut"><input type="checkbox" id="cut" checked> Cutaway</label>
+            <button type="button" class="chipbtn" id="v3reset">Reset view</button>
+          </div>
+        </div>
+        <div class="v3grid">
+          <div class="v3box"><div id="v3d"></div><div class="tip" id="v3tip" hidden></div></div>
+          <div class="lyrs" id="lyrs"></div>
+        </div>
+        <p class="note">Drag to orbit, scroll or pinch to zoom, right-drag to pan. In cutaway mode each layer starts a little further back, so the ones beneath it show. Numbers follow build order; click a layer to isolate it. Windows, doors and lintels are not drawn.</p>
+      </section>
+
+      <section class="panel" aria-label="Cost by size">
+        <h2>Same shape, other sizes</h2>
+        <div class="chartbox" id="chartbox"><svg id="sweep" role="img" aria-label="Stacked material cost by floor area"></svg><div class="tip" id="tip" hidden></div></div>
+        <p class="note">Footprints at your current length:width ratio and settings. The darker-labelled bar is your current size. Hover a bar for the breakdown and €/m².</p>
+      </section>
+
+      <section class="panel" aria-label="Bill of materials">
+        <h2>Bill of materials</h2>
+        <div class="bomwrap"><table class="bom" id="bom"></table></div>
+        <p class="note">Consumption per m² and unit prices come from your tabs. Untick a line to drop it, or type a new price. Edits stay in this browser.</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+/*MODEL-START*/
+const SECTIONS = [
+  { id: 'found', name: 'Foundation', src: 'fibo', color: '--s1', items: [
+    { id: 'f1', n: 'Taldmikuplokk 490×185×350', d: 'üks rida, 0.35 m ploki kohta; sheeti 22.6 €/jm = 7.91 €/tk', u: 'tk', c: 1, p: 7.91, b: 'footing', perTxt: '1 tk / 0.35 m' },
+    { id: 'f2', n: 'Vundamendimüür 200 mm, 5 MPa', d: 'plokid 30.90 + segu 4.50 + armatuur 1.05', u: 'm²', c: 1, p: 36.45, b: 'foundwall' },
+    { id: 'f3', n: 'Hüdroisolatsioon vundamendi peal', d: 'bituumenrull ~0.4 m riba, seina ja vundamendi vahele', u: 'jm', c: 1, p: 1.6, b: 'P', est: true },
+  ]},
+  { id: 'floor', name: 'Floor', src: 'floor', color: '--s2', variant: 'concrete', items: [
+    { id: 'c1', n: 'Killustik 16-32', d: '150 mm kiht', u: 't', c: 0.25, p: 20, b: 'A' },
+    { id: 'c2', n: 'Täiteliiv', d: '100 mm kiht', u: 't', c: 0.15, p: 15, b: 'A' },
+    { id: 'c3', n: 'Geotekstiil', d: 'ülekate 10%', u: 'm²', c: 1.1, p: 0.6, b: 'A' },
+    { id: 'c4', n: 'Soojustus EPS 100', d: '100 mm, kiht 1', u: 'm³', c: 0.167, p: 57.6, b: 'A' },
+    { id: 'c5', n: 'Soojustus EPS 100', d: '100 mm, kiht 2', u: 'm³', c: 0.167, p: 57.6, b: 'A' },
+    { id: 'c6', n: 'Ehituskile 0.2 mm', d: 'ülekate 10%', u: 'm²', c: 1.1, p: 0.5, b: 'A' },
+    { id: 'c7', n: 'Armatuurvõrk 8 mm 150×150', d: 'ülekate 10%', u: 'm²', c: 1.1, p: 4.5, b: 'A' },
+    { id: 'c8', n: 'Armatuuri kandurid', d: '4-5 tk / m²', u: 'tk', c: 5, p: 0.08, b: 'A' },
+    { id: 'c9', n: 'Põrandaküttetoru 16-20 mm', d: 'samm 200 mm', u: 'jm', c: 5, p: 0.7, b: 'A' },
+    { id: 'c10', n: 'Sidumistraat / nipukad', d: 'toru kinnituseks', u: 'kompl', c: 1, p: 0.5, b: 'A' },
+    { id: 'c11', n: 'Äärelint', d: 'perimeetrile', u: 'jm', c: 0.3, p: 0.6, b: 'A' },
+    { id: 'c12', n: 'Betoon C25/30', d: '100 mm kiht (off in sheet)', u: 'm³', c: 0.1, p: 143, b: 'A', off: true },
+    { id: 'c13', n: 'Betoon, hankepakkumine', d: 'teoreetiline pakkumine, €/m²', u: 'm²', c: 1, p: 37.5, b: 'A' },
+  ]},
+  { id: 'floor', name: 'Floor', src: 'floor_wood', color: '--s2', variant: 'wood', items: [
+    { id: 'w1', n: 'Karkassipruss 50×200', d: '', u: 'jm', c: 2, p: 5.7, b: 'A' },
+    { id: 'w2', n: 'OSB-3 alusplaat 22 mm', d: '', u: 'm²', c: 1.27, p: 10.56, b: 'A' },
+    { id: 'w3', n: 'Kivivill 200 mm', d: '', u: 'm²', c: 1, p: 13.89, b: 'A' },
+    { id: 'w4', n: 'Aluslaudis 22×100', d: '', u: 'jm', c: 2.05, p: 1.15, b: 'A' },
+    { id: 'w5', n: 'Soojusjaotusplaat 150 mm', d: '', u: 'jm', c: 2.05, p: 4.39, b: 'A' },
+    { id: 'w6', n: 'Põrandaküttetoru', d: '', u: 'jm', c: 10.9, p: 0.67, b: 'A' },
+    { id: 'w7', n: 'Kinnitustarvikud', d: 'kruvid jms', u: 'kompl', c: 1, p: 1.5, b: 'A' },
+  ]},
+  // Exterior walls. Fibo: block wall + the facade-tab layers outside it (blocks alone are neither warm nor weatherproof).
+  // Wood: the facade-tab layers are the whole wall. Gable triangles are timber in both cases.
+  { id: 'walls', name: 'Exterior walls', src: 'fibo + facade', color: '--s3', items: [
+    { id: 'm1', sys: 'fibo', g: 'Fibo block wall (fibo tab)', n: 'Kandev välissein 200 mm, 3 MPa', d: 'plokid 26.90 + segu 4.50 + armatuur 1.05', u: 'm²', c: 1, p: 32.45, b: 'extwall' },
+    { id: 'm3', sys: 'fibo', g: 'Fibo block wall (fibo tab)', n: 'Sillused akende ja uste kohale', d: 'ava laius + toetus mõlemalt poolt', u: 'jm', c: 1, p: 25, b: 'lintel', est: true },
+    { id: 'a1', g: { fibo: 'Insulation & cladding outside the blocks (facade tab)', wood: 'Timber-frame wall (facade tab)' }, u: 'm²', c: 1.05, b: 'facade', byT: {
+      100: { n: 'Fassaadivill 100 mm', p: 4.45, d: 'facade tab' },
+      150: { n: 'Vill 150 mm', p: 6.37, d: 'klaasvill 150 mm hind roof tabist' },
+      200: { n: 'Vill 200 mm', p: 8.49, d: 'roof tabi 150 mm hind × 200/150' },
+      250: { n: 'Vill 200 mm', p: 8.49, d: 'roof tabi 150 mm hind × 200/150' } } },
+    { id: 'a2', n: 'Tuuletõkkeplaat', d: '', u: 'm²', c: 1.05, p: 4.0, b: 'facade' },
+    { id: 'a3', u: 'jm', c: 2.5, b: 'facade', byT: {
+      100: { n: 'Karkassipruss 50×100', p: 3.44, d: { fibo: 'roovid villa ja voodri jaoks; viilude karkass', wood: 'kandev karkass, samm 0.6' } },
+      150: { n: 'Karkassipruss 50×150', p: 4.57, d: 'hind 50×100 ja 50×200 vahelt', est: true },
+      200: { n: 'Karkassipruss 50×200', p: 5.7, d: 'hind roof/floor tabist' },
+      250: { n: 'Karkassipruss 50×200', p: 5.7, d: 'hind roof/floor tabist' } } },
+    { id: 'a8', minT: 250, n: 'Ristroovitus 50×50', d: 'teine kiht risti, samm 0.6; roovituse hind roof tabist', u: 'jm', c: 1.8, p: 1.5, b: 'facade', est: true },
+    { id: 'a9', minT: 250, n: 'Lisavill 50 mm', d: 'ristroovituse vahele; 150 mm hind × 50/150', u: 'm²', c: 1.05, p: 2.12, b: 'facade', est: true },
+    { id: 'a4', n: 'Tuulutusliist', d: '', u: 'jm', c: 2.5, p: 1.0, b: 'facade' },
+    { id: 'a5', n: 'Kinnitusvahendid', d: '', u: 'kompl', c: 1, p: 2.14, b: 'facade' },
+    { id: 'a6', n: 'Voodrilaud, krunditud', d: '', u: 'm²', c: 1.1, p: 20, b: 'facade' },
+    { id: 'a7', sys: 'wood', n: 'Aurutõke 0.2 mm', d: 'karkassi sisekülg; tihti alles siseviimistluse etapis', u: 'm²', c: 1.1, p: 0.5, b: 'facade', est: true, off: true },
+  ]},
+  { id: 'inner', name: 'Inner walls', src: 'fibo', color: '--s4', items: [
+    { id: 'm2', sys: 'fibo', n: 'Õhuke eraldussein 100 mm', d: 'plokid 17.90 + segu 2.50 + armatuur 1.05', u: 'm²', c: 1, p: 21.45, b: 'partition' },
+    { id: 'i1', sys: 'wood', n: 'Vaheseina karkass 50×100', d: 'postid samm 0.6 + alumine ja ülemine pruss; facade-tab hind', u: 'jm', c: 2.4, p: 3.44, b: 'partition', est: true },
+  ]},
+  { id: 'roof', name: 'Roof', src: 'roof', color: '--s5', items: [
+    { id: 'r1', n: 'Trapetsplekk T20', d: '', u: 'm²', c: 1.05, p: 13, b: 'roof' },
+    { id: 'r2', n: 'Aluskate (katusekile)', d: '', u: 'm²', c: 1.02, p: 2, b: 'roof' },
+    { id: 'r3', n: 'Sarikad 50×200', d: '', u: 'jm', c: 1.72, p: 5.7, b: 'roof' },
+    { id: 'r4', n: 'Roovitus 50×50', d: '', u: 'jm', c: 3.06, p: 1.5, b: 'roof' },
+    { id: 'r5', n: 'Tuulutusliist 32×100', d: '', u: 'jm', c: 1.02, p: 1.34, b: 'roof' },
+    { id: 'r6', n: 'Klaasvill 150 mm', d: '', u: 'm²', c: 1.02, p: 6.37, b: 'roof' },
+    { id: 'r7', n: 'Harja-, räästa-, viilu-, neeluplekid', d: '', u: 'jm', c: 0.2, p: 8.34, b: 'roof' },
+    { id: 'r8', n: 'Kruvid, tihendusteibid jms', d: '', u: 'kompl', c: 1, p: 1.36, b: 'roof' },
+    { id: 'r9', n: 'Tihendusharjad, otsaliistud jms', d: '', u: 'kompl', c: 1, p: 0.51, b: 'roof' },
+    { id: 'r10', n: 'Laetalad 50×200', d: 'sheet multiplies by roof area', u: 'jm', c: 1.5, p: 5.7, b: 'roof' },
+  ]},
+  { id: 'open', name: 'Windows & doors', src: 'shoppinglist', color: '--s6', items: [
+    { id: 'o1', n: 'Aknad', d: 'keskmine sinu shoppinglist hindadest (70–165 €/m²)', u: 'm²', c: 1, p: 120, b: 'win' },
+    { id: 'o2', n: 'Välisuks, soojustatud', d: 'rough market guess', u: 'tk', c: 1, p: 900, b: 'doors', est: true },
+  ]},
+];
+
+// Rough wall U-values, W/m²K (framing bridges included roughly; fibo 200 mm counted as R ≈ 1.1).
+const U_WALL = { wood: { 100: 0.40, 150: 0.28, 200: 0.22, 250: 0.17 }, fibo: { 100: 0.27, 150: 0.20, 200: 0.16, 250: 0.13 } };
+
+const DEFAULTS = { L: 10, W: 8, H: 2.8, pitch: 45, ov: 0.5, floor: 'concrete', walls: 'fibo', wt: 100, inner: true, fwH: 1.3, part: 12,
+  gables: true, openings: true, winPct: 12, doors: 2, res: 0 };
+const FOOT_BLOCK_LEN = 0.35; // taldmikuplokk 490 wide × 185 high × 350 along the wall, one row
+const DOOR_AREA = 2.1, WIN_H = 1.3, DOOR_W = 1.0, LINTEL_EXTRA = 1.25;
+
+function geometry(s) {
+  const A = s.L * s.W, P = 2 * (s.L + s.W), rad = s.pitch * Math.PI / 180;
+  const slope = ((s.W + 2 * s.ov) / 2) / Math.cos(rad);
+  const roof = (s.L + 2 * s.ov) * 2 * slope;
+  const gable = s.gables ? s.W * s.W * Math.tan(rad) / 2 : 0;
+  const win = s.openings ? A * s.winPct / 100 : 0;
+  const doors = s.openings ? s.doors : 0;
+  const holes = win + doors * DOOR_AREA;
+  return { A, P, roof, gable, win, doors,
+    footing: Math.ceil(P / FOOT_BLOCK_LEN), foundwall: P * s.fwH,
+    extwall: Math.max(0, P * s.H - holes), partition: s.part * s.H,
+    lintel: (win / WIN_H + doors * DOOR_W) * LINTEL_EXTRA,
+    facade: Math.max(0, P * s.H + gable - holes) };
+}
+
+const bySys = (v, sys) => (v && typeof v === 'object') ? v[sys] : v;
+
+// prices: {itemId: price}, off: {itemId: true/false}; sheetOnly drops lines that are not in the workbook tabs
+function estimate(s, prices = {}, off = {}, sheetOnly = false) {
+  const g = geometry(s);
+  const sections = [];
+  for (const sec of SECTIONS) {
+    if (sec.variant && sec.variant !== s.floor) continue;
+    if (sec.id === 'open' && !s.openings) continue;
+    if (sec.id === 'inner' && !s.inner) continue;
+    const lines = sec.items
+      .filter(it => (!it.sys || it.sys === s.walls) && !(it.minT && s.wt < it.minT))
+      .map(it => it.byT ? { ...it, ...it.byT[s.wt], id: it.id + '@' + s.wt } : it)
+      .filter(it => !(sheetOnly && it.est))
+      .map(it => {
+        const p = prices[it.id] ?? it.p;
+        const isOff = off[it.id] ?? !!it.off;
+        const qty = it.c * g[it.b];
+        return { ...it, g: bySys(it.g, s.walls), d: bySys(it.d, s.walls), p, qty, isOff, cost: isOff ? 0 : qty * p };
+      });
+    sections.push({ ...sec, lines, cost: lines.reduce((a, l) => a + l.cost, 0) });
+  }
+  const sub = sections.reduce((a, x) => a + x.cost, 0);
+  const reserve = sub * s.res / 100;
+  return { g, sections, sub, reserve, total: sub + reserve };
+}
+/*MODEL-END*/
+
+const $ = id => document.getElementById(id);
+const eur = v => '€' + Math.round(v).toLocaleString('en-US').replace(/,/g, ' ');
+const num = (v, d = 1) => v.toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d });
+const cssv = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+const PRESETS = [
+  { k: '15 × 5.3 shed', L: 15, W: 5.3, t: 'current shed in front of the main building' },
+  { k: '10 × 8', L: 10, W: 8, t: 'every cost tab' },
+  { k: '13 × 6.5', L: 13, W: 6.5, t: 'parameters tab' },
+  { k: '15 × 11.5', L: 15, W: 11.5, t: 'parameters tab' },
+  { k: '17.67 × 10.13', L: 17.67, W: 10.13, t: 'measurements tab' },
+];
+
+let state = { ...DEFAULTS }, prices = {}, off = {};
+try { const saved = JSON.parse(localStorage.getItem('metsamaja-shell') || 'null');
+  if (saved) { state = { ...DEFAULTS, ...saved.state }; prices = saved.prices || {}; off = saved.off || {}; } } catch (e) {}
+function save() { try { localStorage.setItem('metsamaja-shell', JSON.stringify({ state, prices, off })); } catch (e) {} }
+
+const NUM_IDS = ['L', 'W', 'H', 'pitch', 'ov', 'fwH', 'part', 'winPct', 'doors', 'res'];
+const pairs = { L: 'Lr', W: 'Wr', pitch: 'pitchr' };
+
+function syncInputs() {
+  for (const id of NUM_IDS) { $(id).value = state[id]; if (pairs[id]) $(pairs[id]).value = state[id]; }
+  $('floorC').checked = state.floor === 'concrete'; $('floorW').checked = state.floor === 'wood';
+  $('wallsF').checked = state.walls === 'fibo'; $('wallsW').checked = state.walls === 'wood';
+  $('gables').checked = state.gables; $('openings').checked = state.openings; $('inner').checked = state.inner;
+  $('winPct').disabled = $('doors').disabled = !state.openings;
+  $('part').disabled = !state.inner;
+  for (const t of [100, 150, 200, 250]) $('wt' + t).checked = state.wt === t;
+  const stud = state.wt === 100 ? '50×100' : state.wt === 150 ? '50×150' : '50×200';
+  const wool = state.wt === 250 ? '200 + 50 mm wool (cross battens)' : state.wt + ' mm wool';
+  const u = U_WALL[state.walls][state.wt];
+  $('wallnote').innerHTML = (state.walls === 'fibo'
+    ? `200 mm blocks, then ${wool} in ${stud} battens, wind barrier and cladding outside. Lintels over openings.`
+    : `${stud} frame with ${wool}, wind barrier and cladding. No wall blocks.`) +
+    ` Wall U ≈ <b style="font-family:var(--f-mono);font-weight:500">${u.toFixed(2)}</b> W/m²K (rough).`;
+}
+
+function renderPresets() {
+  $('presets').innerHTML = PRESETS.map((p, i) =>
+    `<button type="button" class="chipbtn" data-i="${i}" title="from ${p.t}" aria-pressed="${state.L === p.L && state.W === p.W}">${p.k}</button>`).join('');
+}
+
+function render() {
+  const r = estimate(state, prices, off);
+  const g = r.g;
+  $('total').textContent = eur(r.total);
+  $('stats').innerHTML = [
+    [eur(r.total / g.A), 'per m² footprint'],
+    [num(g.A, 1) + ' m²', 'footprint'],
+    [num(g.roof, 0) + ' m²', 'roof'],
+    [num(g.facade, 0) + ' m²', 'facade'],
+  ].map(([v, l]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('');
+
+  const parts = r.sections.map(s => ({ name: s.name, color: s.color, cost: s.cost }));
+  if (r.reserve > 0) parts.push({ name: `Reserve ${state.res}%`, color: '--s7', cost: r.reserve });
+  $('stackbar').innerHTML = parts.filter(p => p.cost > 0).map(p =>
+    `<div style="flex-grow:${p.cost};background:var(${p.color})" title="${p.name}: ${eur(p.cost)}"></div>`).join('');
+  $('legend').innerHTML = parts.map(p =>
+    `<span><i style="background:var(${p.color})"></i>${p.name}<b>${eur(p.cost)}</b></span>`).join('');
+
+  const otherSys = state.walls === 'fibo' ? 'wood' : 'fibo';
+  const other = estimate({ ...state, walls: otherSys }, prices, off);
+  const diff = other.total - r.total;
+  $('vs').innerHTML = `Same house with ${otherSys === 'wood' ? 'timber-frame' : 'fibo block'} walls: <b>${eur(other.total)}</b> ` +
+    `(${diff >= 0 ? '+' : '−'}${eur(Math.abs(diff))}). <button type="button" class="chipbtn" id="swap">Switch</button>`;
+  $('swap').onclick = () => { state.walls = otherSys; syncInputs(); render(); };
+
+  // Reference check against the summary tab: fibo walls, concrete floor, no gables, no windows, only workbook lines.
+  const sheet = estimate({ ...DEFAULTS, walls: 'fibo', wt: 100, floor: 'concrete', inner: true, gables: false, openings: false, res: 0 }, {}, {}, true);
+  $('check').innerHTML = `Check: your summary tab (10 × 8) says <b>€23 941</b>. This model gives <b>${eur(sheet.total)}</b> with the same choices (fibo walls, concrete floor, no gables, no windows); footing blocks are counted whole, hence the euro or so of difference. Lines marked <span class="est">guess</span> are not from your workbook.`;
+
+  renderBom(r);
+  renderSweep();
+  renderPresets();
+  if (window.render3d) window.render3d();
+  save();
+}
+
+function renderBom(r) {
+  const per = { P: 'jm', lintel: 'jm', doors: 'tk' };
+  let h = `<thead><tr><th></th><th>Material</th><th class="num">Per unit</th><th class="num">Quantity</th><th class="num">Unit price €</th><th class="num">Cost</th></tr></thead><tbody>`;
+  for (const s of r.sections) {
+    const src = s.id === 'inner' ? (state.walls === 'fibo' ? 'fibo' : 'estimate') : s.id === 'walls' ? (state.walls === 'fibo' ? 'fibo + facade' : 'facade') : s.src;
+    h += `<tr class="sec"><td colspan="5"><i style="background:var(${s.color})"></i>${s.name}<span class="src">tab: ${src}</span></td><td class="num">${eur(s.cost)}</td></tr>`;
+    for (const l of s.lines) {
+      if (l.g) h += `<tr class="grp"><td></td><td colspan="5">${l.g}</td></tr>`;
+      h += `<tr class="${l.isOff ? 'off' : ''}">
+        <td><input type="checkbox" data-off="${l.id}" ${l.isOff ? '' : 'checked'} aria-label="Include ${l.n}"></td>
+        <td class="n">${l.n}${l.est ? '<span class="est">guess</span>' : ''}${l.d ? `<small>${l.d}</small>` : ''}</td>
+        <td class="num">${l.perTxt || `${num(l.c, l.c % 1 ? 2 : 0)} ${l.u}/${per[l.b] || 'm²'}`}</td>
+        <td class="num">${num(l.qty, l.qty < 20 ? 1 : 0)} ${l.u}</td>
+        <td class="num"><input type="number" step="0.01" min="0" data-price="${l.id}" value="${l.p}" aria-label="Unit price for ${l.n}"></td>
+        <td class="num">${eur(l.cost)}</td></tr>`;
+    }
+  }
+  if (r.reserve > 0) h += `<tr class="sec"><td colspan="5"><i style="background:var(--s7)"></i>Reserve / waste ${state.res}%</td><td class="num">${eur(r.reserve)}</td></tr>`;
+  h += `<tr class="sec"><td colspan="5">Total</td><td class="num">${eur(r.total)}</td></tr></tbody>`;
+  const focused = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.price : null;
+  $('bom').innerHTML = h;
+  if (focused) { const el = $('bom').querySelector(`[data-price="${focused}"]`); if (el) { el.focus(); const v = el.value; el.value = ''; el.value = v; } }
+}
+
+function renderSweep() {
+  const ratio = state.L / state.W;
+  const areas = [30, 50, 70, 90, 110, 130, 160, 200];
+  const curA = state.L * state.W;
+  const pts = areas.filter(a => Math.abs(a - curA) > 6).map(a => ({ a, cur: false }));
+  pts.push({ a: curA, cur: true });
+  pts.sort((x, y) => x.a - y.a);
+  const rows = pts.map(pt => {
+    const W = Math.sqrt(pt.a / ratio), L = W * ratio;
+    const r = estimate({ ...state, L, W }, prices, off);
+    const segs = r.sections.map(s => ({ name: s.name, color: s.color, v: s.cost }));
+    if (r.reserve > 0) segs.push({ name: 'Reserve', color: '--s7', v: r.reserve });
+    return { ...pt, L, W, total: r.total, segs };
+  });
+
+  const box = $('chartbox');
+  const Wpx = Math.max(520, box.clientWidth), Hpx = 280;
+  const m = { l: 56, r: 12, t: 14, b: 40 };
+  const iw = Wpx - m.l - m.r, ih = Hpx - m.t - m.b;
+  const maxV = Math.max(...rows.map(r => r.total));
+  const step = niceStep(maxV / 4);
+  const top = Math.ceil(maxV / step) * step;
+  const y = v => m.t + ih - (v / top) * ih;
+  const band = iw / rows.length, bw = Math.min(46, band * 0.62);
+  let s = '';
+  for (let v = 0; v <= top + 1e-6; v += step) {
+    s += `<line class="gridl" x1="${m.l}" x2="${Wpx - m.r}" y1="${y(v)}" y2="${y(v)}"/>`;
+    s += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end">${v >= 1000 ? (v / 1000) + 'k' : v}</text>`;
+  }
+  rows.forEach((r, i) => {
+    const cx = m.l + band * i + band / 2, x0 = cx - bw / 2;
+    let acc = 0;
+    const visible = r.segs.filter(sg => sg.v > 0);
+    visible.forEach((sg, j) => {
+      const y1 = y(acc + sg.v), y0 = y(acc);
+      const hgt = Math.max(0, y0 - y1 - (j < visible.length - 1 ? 0 : 0) - 2);
+      const isTop = j === visible.length - 1;
+      s += isTop
+        ? `<path d="${topRounded(x0, y1, bw, Math.max(0, y0 - y1 - 2), 4)}" fill="var(${sg.color})"/>`
+        : `<rect x="${x0}" y="${y1}" width="${bw}" height="${Math.max(0, y0 - y1 - 2)}" fill="var(${sg.color})"/>`;
+      acc += sg.v;
+    });
+    s += `<text x="${cx}" y="${Hpx - m.b + 16}" text-anchor="middle" style="${r.cur ? 'fill:var(--ink);font-weight:500' : ''}">${Math.round(r.a)} m²</text>`;
+    if (r.cur) s += `<text x="${cx}" y="${Hpx - m.b + 30}" text-anchor="middle" style="fill:var(--accent)">yours</text>`;
+    if (r.cur) s += `<text x="${cx}" y="${y(r.total) - 6}" text-anchor="middle" style="fill:var(--ink)">${eur(r.total)}</text>`;
+    s += `<rect class="hit" data-i="${i}" x="${m.l + band * i}" y="${m.t}" width="${band}" height="${ih}" fill="transparent"/>`;
+  });
+  const svg = $('sweep');
+  svg.setAttribute('viewBox', `0 0 ${Wpx} ${Hpx}`);
+  svg.setAttribute('width', Wpx); svg.setAttribute('height', Hpx);
+  svg.innerHTML = s;
+  svg.onmousemove = e => {
+    const t = e.target.closest('.hit'); const tip = $('tip');
+    if (!t) { tip.hidden = true; return; }
+    const r = rows[+t.dataset.i];
+    tip.innerHTML = `<h4>${num(r.L, 1)} × ${num(r.W, 1)} m · ${Math.round(r.a)} m²</h4>` +
+      r.segs.filter(x => x.v > 0).slice().reverse().map(x => `<div class="r"><span><i style="background:var(${x.color})"></i>${x.name}</span><span>${eur(x.v)}</span></div>`).join('') +
+      `<div class="r" style="margin-top:4px;border-top:1px solid var(--rule);padding-top:4px;color:var(--ink)"><span>Total</span><span>${eur(r.total)}</span></div>` +
+      `<div class="r"><span>Per m²</span><span>${eur(r.total / r.a)}</span></div>`;
+    tip.hidden = false;
+    const bx = box.getBoundingClientRect();
+    let left = e.clientX - bx.left + box.scrollLeft + 14;
+    if (left + 210 > box.scrollLeft + bx.width) left = e.clientX - bx.left + box.scrollLeft - 214;
+    tip.style.left = left + 'px'; tip.style.top = Math.max(0, e.clientY - bx.top - 40) + 'px';
+  };
+  svg.onmouseleave = () => { $('tip').hidden = true; };
+}
+function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))); const n = raw / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * p; }
+function topRounded(x, y, w, h, r) { r = Math.min(r, h, w / 2); return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`; }
+
+// Wiring
+for (const id of NUM_IDS) $(id).addEventListener('input', e => {
+  const v = parseFloat(e.target.value); if (isNaN(v)) return;
+  state[id] = v; if (pairs[id]) $(pairs[id]).value = v; render();
+});
+for (const [id, r] of Object.entries(pairs)) $(r).addEventListener('input', e => { state[id] = +e.target.value; $(id).value = state[id]; render(); });
+for (const id of ['floorC', 'floorW']) $(id).addEventListener('change', e => { state.floor = e.target.value; render(); });
+for (const id of ['wallsF', 'wallsW']) $(id).addEventListener('change', e => { state.walls = e.target.value; syncInputs(); render(); });
+for (const t of [100, 150, 200, 250]) $('wt' + t).addEventListener('change', () => { state.wt = t; syncInputs(); render(); });
+$('inner').addEventListener('change', e => { state.inner = e.target.checked; syncInputs(); render(); });
+$('gables').addEventListener('change', e => { state.gables = e.target.checked; render(); });
+$('openings').addEventListener('change', e => { state.openings = e.target.checked; syncInputs(); render(); });
+$('presets').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const p = PRESETS[+b.dataset.i]; state.L = p.L; state.W = p.W; syncInputs(); render(); });
+$('bom').addEventListener('change', e => { const id = e.target.dataset.off; if (id) { off[id] = !e.target.checked; render(); } });
+$('bom').addEventListener('input', e => { const id = e.target.dataset.price; if (!id) return; const v = parseFloat(e.target.value); if (isNaN(v)) return; prices[id] = v; render(); });
+$('reset').addEventListener('click', () => { state = { ...DEFAULTS }; prices = {}; off = {}; syncInputs(); render(); });
+window.addEventListener('resize', renderSweep);
+syncInputs(); render();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+/* 3D layer cutaway. Coordinates in metres: x across the width (0..W, outer face of foundation/structural wall),
+   y up (0 = top of foundation = finished floor), z along the length (0 = front, L = back). */
+(function () {
+  const host = $('v3d');
+  if (!window.THREE || !THREE.OrbitControls) { host.innerHTML = '<p class="note" style="padding:16px">The 3D viewer could not load.</p>'; return; }
+  const T = THREE;
+  const view = { cut: true };
+  let renderer;
+  try { renderer = new T.WebGLRenderer({ antialias: true }); }
+  catch (e) { host.innerHTML = '<p class="note" style="padding:16px">This browser has WebGL turned off, so the 3D view is unavailable.</p>'; return; }
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  host.appendChild(renderer.domElement);
+  const scene = new T.Scene();
+  const camera = new T.PerspectiveCamera(35, 1, 0.05, 500);
+  const controls = new T.OrbitControls(camera, renderer.domElement);
+  controls.addEventListener('change', draw);
+  scene.add(new T.HemisphereLight(0xffffff, 0x8a8f88, 0.8));
+  const sun = new T.DirectionalLight(0xffffff, 0.7); sun.position.set(-6, 10, -5); scene.add(sun);
+  const fill = new T.DirectionalLight(0xffffff, 0.25); fill.position.set(8, 3, 7); scene.add(fill);
+  const unit = new T.BoxGeometry(1, 1, 1);
+  let root = null, layers = [], sel = null, lastKey = '', framedFor = '';
+
+  function draw() { renderer.render(scene, camera); }
+  function setBg() { scene.background = new T.Color(cssv('--bg') || '#f3f5f2'); draw(); }
+
+  function build(s) {
+    const W = s.W, L = s.L, H = s.H, ov = s.ov, fwH = s.fwH, cut = view.cut;
+    const th = s.pitch * Math.PI / 180, tn = Math.tan(th), sn = Math.sin(th), cs = Math.cos(th);
+    const out = [];
+    const mk = (group, name, color, desc, o = {}) => { const l = { group, name, color, desc, boxes: [], shapes: [], ...o }; out.push(l); return l; };
+    const box = (l, x0, x1, y0, y1, z0, z1, rot = 0) => {
+      if (x1 - x0 <= 1e-6 || y1 - y0 <= 1e-6 || z1 - z0 <= 1e-6) return;
+      l.boxes.push([(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2, x1 - x0, y1 - y0, z1 - z0, rot]);
+    };
+    const step = cut ? Math.min(0.45, L * 0.06) : 0;
+    const zStart = (k, base) => cut ? Math.max(base, k * step) : base;
+
+    // A run of wall material along one side. u runs along the wall, s is outward distance from the structural outer face.
+    function run(l, side, u0, u1, s0, s1, y0, y1, kind, o = {}) {
+      const put = (ua, ub, ya, yb) => {
+        if (side === 'L') box(l, -s1, -s0, ya, yb, ua, ub);
+        else if (side === 'R') box(l, W + s0, W + s1, ya, yb, ua, ub);
+        else if (side === 'B') box(l, ua, ub, ya, yb, L + s0, L + s1);
+        else box(l, ua, ub, ya, yb, -s1, -s0);
+      };
+      if (kind === 'solid') put(u0, u1, y0, y1);
+      else if (kind === 'blocks') {
+        const len = o.len || 0.49, h = o.h || 0.19, ch = o.ch || 0.2, pitch = len + 0.01;
+        let c = 0;
+        for (let y = y0; y < y1 - 1e-6; y += ch, c++) {
+          const yb = Math.min(y + h, y1);
+          for (let u = u0 - (c % 2 ? pitch / 2 : 0); u < u1; u += pitch) put(Math.max(u, u0), Math.min(u + len, u1), y, yb);
+        }
+      } else if (kind === 'studs') {
+        const w = o.w || 0.05, sp = o.sp || 0.6, ya = o.plates ? y0 + 0.05 : y0, yb = o.plates ? y1 - 0.05 : y1;
+        for (let u = u0; u < u1 - w; u += sp) put(u, u + w, ya, yb);
+        put(u1 - w, u1, ya, yb);
+        if (o.plates) { put(u0, u1, y0, y0 + 0.05); put(u0, u1, y1 - 0.05, y1); }
+      } else if (kind === 'hbat') {
+        for (let y = y0 + 0.3; y < y1 - 0.05; y += 0.6) put(u0, u1, y, y + 0.05);
+      } else if (kind === 'boards') {
+        for (let y = y0; y < y1 - 0.01; y += 0.124) put(u0, u1, y, Math.min(y + 0.12, y1));
+      }
+    }
+    function gable(l, sd, u0, u1, s0, s1) {
+      if (tn < 0.02) return;
+      const apex = H + (W / 2) * tn;
+      const pts = u0 < 0
+        ? [[u0, H + u0 * tn], [u1, H + u0 * tn], [W / 2, apex]]
+        : [[u0, H], [u1, H], [u1, H + u0 * tn], [W / 2, apex], [u0, H + u0 * tn]];
+      l.shapes.push({ pts, z0: sd === 'B' ? L + s0 : -s1, depth: s1 - s0 });
+    }
+    // Lays a stack of wall-like layers (inside → out) on all sides, staircased from the front in cutaway mode.
+    function stack(group, list, k0 = 0) {
+      const sides = cut ? ['L', 'R', 'B'] : ['L', 'R', 'B', 'F'];
+      list.forEach((ly, i) => {
+        const k = k0 + i;
+        const l = mk(group, ly.name, ly.color, ly.desc, { op: ly.op });
+        const inner = ly.s1 <= 1e-6, strad = ly.s0 < 0 && ly.s1 > 0;
+        let ua = (strad || inner) ? -ly.s1 : -ly.s0;
+        const ub = (strad || inner) ? L + ly.s1 : L + ly.s0;
+        ua = zStart(k, ua);
+        const bu0 = (strad || inner) ? -ly.s0 : -ly.s1, bu1 = W - bu0;
+        const y0 = ly.y0 ?? 0, ySide = ly.y1 ?? (H - Math.max(0, ly.s1) * tn), yEnd = ly.y1 ?? H;
+        for (const sd of sides) {
+          if (sd === 'L' || sd === 'R') run(l, sd, ua, ub, ly.s0, ly.s1, y0, ySide, ly.kind, ly);
+          else run(l, sd, bu0, bu1, ly.s0, ly.s1, y0, yEnd, ly.kind, ly);
+        }
+        if (ly.gable) for (const sd of (cut ? ['B'] : ['B', 'F'])) gable(l, sd, bu0, bu1, ly.s0, ly.s1);
+      });
+    }
+
+    // Foundation
+    stack('Foundation', [
+      { name: 'Taldmikuplokk 490×185×350', color: 0x9da2a3, desc: 'One row of footing blocks, 490 wide, under the foundation wall', s0: -0.345, s1: 0.145, y0: -fwH - 0.185, y1: -fwH, kind: 'blocks', len: 0.35, h: 0.185, ch: 0.2 },
+      { name: 'Vundamendimüür, fibo 200 mm', color: 0xc3c6c4, desc: `Fibo 5 MPa blocks, ${num(fwH, 2)} m high`, s0: -0.2, s1: 0, y0: -fwH, y1: -0.006, kind: 'blocks' },
+      { name: 'Hüdroisolatsioon', color: 0x2a2a2a, desc: 'Bitumen strip on top of the foundation, under the wall', s0: -0.2, s1: 0, y0: -0.006, y1: 0, kind: 'solid' },
+    ]);
+
+    // Floor, inside the foundation walls
+    const fx0 = 0.2, fx1 = W - 0.2, fz1 = L - 0.2;
+    const flo = (k) => zStart(k, cut ? 0.2 : 0.2);
+    if (s.floor === 'concrete') {
+      const fl = [
+        ['Killustik 16-32', 0x8f918c, '150 mm crushed stone', -0.556, -0.406],
+        ['Täiteliiv', 0xd6bd86, '100 mm fill sand, compacted', -0.406, -0.306],
+        ['Geotekstiil', 0xece6d6, 'Separates sand from insulation', -0.306, -0.302],
+        ['Soojustus EPS 100, kiht 1', 0xf2f1ec, '100 mm', -0.302, -0.202],
+        ['Soojustus EPS 100, kiht 2', 0xe2e1da, '100 mm, joints staggered', -0.202, -0.102],
+        ['Ehituskile 0.2 mm', 0x5aa7d8, 'Moisture barrier under the slab', -0.102, -0.099, 0.6],
+      ];
+      fl.forEach(([n, c, d, y0, y1, op], k) => { const l = mk('Floor', n, c, d, { op }); box(l, fx0, fx1, y0, y1, flo(k), fz1); });
+      let k = fl.length;
+      const mesh = mk('Floor', 'Armatuurvõrk 8 mm 150×150', 0x4a4d50, 'On chairs (kandurid), ~30 mm above the film');
+      for (let x = fx0 + 0.05; x < fx1; x += 0.15) box(mesh, x, x + 0.008, -0.07, -0.062, flo(k), fz1);
+      for (let z = flo(k); z < fz1; z += 0.15) box(mesh, fx0, fx1, -0.062, -0.054, z, z + 0.008);
+      k++;
+      const pipe = mk('Floor', 'Põrandaküttetoru 16-20 mm', 0xd6453d, 'Tied to the mesh, 200 mm spacing');
+      for (let x = fx0 + 0.1; x < fx1 - 0.05; x += 0.2) box(pipe, x, x + 0.018, -0.054, -0.036, flo(k), fz1 - 0.1);
+      k++;
+      const strip = mk('Floor', 'Äärelint', 0x6b8fb3, 'Expansion strip against the foundation wall');
+      box(strip, fx0, fx0 + 0.01, -0.1, 0, flo(k), fz1); box(strip, fx1 - 0.01, fx1, -0.1, 0, flo(k), fz1); box(strip, fx0, fx1, -0.1, 0, fz1 - 0.01, fz1);
+      k++;
+      const conc = mk('Floor', 'Betoon C25/30', 0xb8b8b2, '100 mm slab; pipes and mesh end up inside it');
+      box(conc, fx0 + 0.01, fx1 - 0.01, -0.1, 0, flo(k), fz1 - 0.01);
+    } else {
+      let k = 0;
+      const joist = mk('Floor', 'Karkassipruss 50×200', 0xc99b5c, 'Floor joists across the width, 450 mm spacing');
+      const zj = [];
+      for (let z = flo(k); z < fz1 - 0.05; z += 0.45) zj.push(z);
+      zj.push(fz1 - 0.05);
+      for (const z of zj) box(joist, fx0, fx1, -0.246, -0.046, z, z + 0.05);
+      k++;
+      const wool = mk('Floor', 'Kivivill 200 mm', 0xa9b38f, 'Between the joists');
+      box(wool, fx0, fx1, -0.245, -0.047, flo(k), fz1);
+      k++;
+      const boards = mk('Floor', 'Aluslaudis 22×100', 0xdcb886, 'Boards on the joists with slots for the pipes');
+      for (let x = fx0; x < fx1 - 0.1; x += 0.2) { box(boards, x, x + 0.085, -0.046, -0.024, flo(k), fz1); box(boards, x + 0.115, x + 0.2, -0.046, -0.024, flo(k), fz1); }
+      k++;
+      const pipe = mk('Floor', 'Põrandaküttetoru', 0xd6453d, 'In the slots between boards');
+      for (let x = fx0 + 0.091; x < fx1 - 0.1; x += 0.2) box(pipe, x, x + 0.018, -0.044, -0.026, flo(k), fz1 - 0.1);
+      k++;
+      const plates = mk('Floor', 'Soojusjaotusplaat 150 mm', 0xaab1b8, 'Aluminium spreader plates over the pipes');
+      for (let x = fx0 + 0.025; x < fx1 - 0.15; x += 0.2) box(plates, x, x + 0.15, -0.024, -0.022, flo(k), fz1);
+      k++;
+      const osb = mk('Floor', 'OSB-3 22 mm', 0xc8955a, 'Top board, finished floor goes on this');
+      box(osb, fx0, fx1, -0.022, 0, flo(k), fz1);
+    }
+
+    // Exterior walls (inside → out)
+    const t = s.wt === 250 ? 0.2 : s.wt / 1000;
+    const stud = s.wt === 100 ? '50×100' : s.wt === 150 ? '50×150' : '50×200';
+    const WOOL = 0xe3c45a, TIMBER = 0xd9b07a;
+    const outer = (o) => [
+      { name: 'Tuuletõkkeplaat', color: 0x6b5a46, desc: '25 mm wind barrier board', s0: o, s1: o + 0.025, kind: 'solid', gable: true },
+      { name: 'Tuulutusliist', color: 0xb98d55, desc: '25 mm vertical battens, ventilation gap behind the cladding', s0: o + 0.025, s1: o + 0.05, kind: 'studs', w: 0.045, sp: 0.6 },
+      { name: 'Voodrilaud', color: 0xe4dac8, desc: 'Primed cladding boards', s0: o + 0.05, s1: o + 0.072, kind: 'boards', gable: true },
+    ];
+    let ws = [];
+    if (s.walls === 'fibo') {
+      ws.push({ name: 'Kandev välissein, fibo 200 mm', color: 0xd3d5d2, desc: 'Fibo 3 MPa blocks with mortar and bed-joint reinforcement', s0: -0.2, s1: 0, kind: 'blocks' });
+      ws.push({ name: `Roovid ${stud}`, color: TIMBER, desc: 'Vertical battens fixed to the blocks, hold the wool', s0: 0, s1: t + 0.002, kind: 'studs', w: 0.05, sp: 0.6 });
+      ws.push({ name: `Fassaadivill ${s.wt === 250 ? 200 : s.wt} mm`, color: WOOL, desc: 'Between the battens; also fills the timber gables', s0: 0.001, s1: t, kind: 'solid', gable: true });
+      let o = t;
+      if (s.wt === 250) {
+        ws.push({ name: 'Ristroovitus 50×50', color: 0xcfa36a, desc: 'Horizontal battens over the first layer', s0: t, s1: t + 0.05 + 0.002, kind: 'hbat' });
+        ws.push({ name: 'Lisavill 50 mm', color: 0xead57f, desc: 'Between the cross battens', s0: t + 0.001, s1: t + 0.05, kind: 'solid', gable: true });
+        o = t + 0.05;
+      }
+      ws = ws.concat(outer(o));
+    } else {
+      if (s.wt === 250) {
+        ws.push({ name: 'Ristroovitus 50×50', color: 0xcfa36a, desc: 'Inner installation layer, horizontal', s0: -t - 0.054, s1: -t - 0.004 + 0.002, kind: 'hbat' });
+        ws.push({ name: 'Lisavill 50 mm', color: 0xead57f, desc: 'Between the cross battens', s0: -t - 0.054, s1: -t - 0.005, kind: 'solid', gable: true });
+      }
+      ws.push({ name: 'Aurutõke 0.2 mm', color: 0x7fb7e6, desc: 'Warm side of the frame. Unticked in the price list (interior stage)', s0: -t - 0.004, s1: -t, kind: 'solid', gable: true, op: 0.55 });
+      ws.push({ name: `Karkassipruss ${stud}`, color: TIMBER, desc: 'Load-bearing studs at 600 mm with bottom and top plates', s0: -t, s1: 0.001, kind: 'studs', w: 0.05, sp: 0.6, plates: true });
+      ws.push({ name: `Vill ${s.wt === 250 ? 200 : s.wt} mm`, color: WOOL, desc: 'Between the studs', s0: -t + 0.001, s1: -0.001, kind: 'solid', gable: true });
+      ws = ws.concat(outer(0));
+    }
+    stack('Exterior walls', ws);
+
+    // Roof (inside → out). a runs along the slope from the eave, o is offset perpendicular to the slope.
+    const S = (W / 2 + ov) / cs;
+    const sbox = (l, a0, a1, o0, o1, z0, z1) => {
+      if (a1 - a0 <= 1e-6 || z1 - z0 <= 1e-6) return;
+      const am = (a0 + a1) / 2, om = (o0 + o1) / 2;
+      const dx = -ov + am * cs - om * sn, y = (H - ov * tn) + am * sn + om * cs;
+      l.boxes.push([dx, y, (z0 + z1) / 2, a1 - a0, o1 - o0, z1 - z0, th]);
+      l.boxes.push([W - dx, y, (z0 + z1) / 2, a1 - a0, o1 - o0, z1 - z0, -th]);
+    };
+    const rafterZ = k => { const zs = []; for (let z = 0; z < L - 0.05; z += 0.6) zs.push(z); zs.push(L - 0.05); return zs.filter(z => z >= zStart(k, 0)); };
+    const rz = k => zStart(k, -ov), rzEnd = L + ov;
+    let k = 0;
+    const cj = mk('Roof', 'Laetalad 50×200', 0xc99b5c, 'Ceiling joists on the wall tops, beside each rafter');
+    for (const z of rafterZ(k)) box(cj, 0, W, H, H + 0.2, z + 0.05, Math.min(z + 0.1, L));
+    k++;
+    const raf = mk('Roof', 'Sarikad 50×200', 0xd4a466, 'Rafters at 600 mm');
+    for (const z of rafterZ(k)) sbox(raf, 0, S + 0.1 * tn, 0, 0.2, z, z + 0.05);
+    k++;
+    const rw = mk('Roof', 'Klaasvill 150 mm', 0xf0cf5e, 'Between the rafters, over the heated area');
+    sbox(rw, ov / cs, S + 0.075 * tn, 0.002, 0.15, zStart(k, 0), L);
+    k++;
+    const ul = mk('Roof', 'Aluskate (katusekile)', 0x3b6d8f, 'Underlay on top of the rafters', { op: 0.85 });
+    sbox(ul, 0, S + 0.202 * tn, 0.2, 0.205, rz(k), rzEnd);
+    k++;
+    const cb = mk('Roof', 'Tuulutusliist 32×100', 0xb98d55, 'Counter battens over each rafter, ventilation gap');
+    for (const z of rafterZ(k)) sbox(cb, 0, S + 0.22 * tn, 0.205, 0.237, z, z + 0.05);
+    k++;
+    const bat = mk('Roof', 'Roovitus 50×50', 0xc79d63, 'Battens across the rafters at 350 mm');
+    for (let a = 0.03; a < S - 0.02; a += 0.35) sbox(bat, a, a + 0.05, 0.237, 0.287, rz(k), rzEnd);
+    k++;
+    const steel = mk('Roof', 'Trapetsplekk T20', 0x4c5258, 'Profiled steel sheet; ribs every 200 mm');
+    sbox(steel, -0.03, S + 0.29 * tn, 0.287, 0.292, rz(k), rzEnd);
+    for (let z = rz(k); z < rzEnd - 0.03; z += 0.2) sbox(steel, -0.03, S + 0.3 * tn, 0.292, 0.307, z, z + 0.03);
+    k++;
+    if (tn > 0.02) {
+      const rid = mk('Roof', 'Harjaplekk', 0x353a40, 'Ridge flashing; eave, gable and valley flashings are in the same price line');
+      sbox(rid, S - 0.22, S + 0.315 * tn, 0.307, 0.314, rz(k), rzEnd);
+    }
+    return out;
+  }
+
+  function dispose() {
+    if (!root) return;
+    root.traverse(o => { if (o.isMesh) { if (o.geometry !== unit) o.geometry.dispose(); o.material.dispose(); } });
+    scene.remove(root);
+  }
+
+  const m4 = new T.Matrix4(), q = new T.Quaternion(), eu = new T.Euler(), pv = new T.Vector3(), sv = new T.Vector3();
+  function rebuild() {
+    dispose();
+    layers = build(state);
+    root = new T.Group();
+    root.position.set(-state.W / 2, 0, -state.L / 2);
+    layers.forEach((l, i) => {
+      const op = l.op ?? 1;
+      l.mat = new T.MeshStandardMaterial({ color: l.color, roughness: 0.85, metalness: 0, transparent: op < 1, opacity: op, side: T.DoubleSide });
+      l.baseOp = op;
+      if (l.boxes.length) {
+        const im = new T.InstancedMesh(unit, l.mat, l.boxes.length);
+        l.boxes.forEach((b, j) => { eu.set(0, 0, b[6]); q.setFromEuler(eu); m4.compose(pv.set(b[0], b[1], b[2]), q, sv.set(b[3], b[4], b[5])); im.setMatrixAt(j, m4); });
+        im.instanceMatrix.needsUpdate = true;
+        im.userData.layer = i;
+        root.add(im);
+      }
+      for (const sh of l.shapes) {
+        const shape = new T.Shape(sh.pts.map(([x, y]) => new T.Vector2(x, y)));
+        const g = new T.ExtrudeGeometry(shape, { depth: sh.depth, bevelEnabled: false });
+        const m = new T.Mesh(g, l.mat); m.position.z = sh.z0; m.userData.layer = i;
+        root.add(m);
+      }
+    });
+    scene.add(root);
+    if (sel != null && sel >= layers.length) sel = null;
+    applySel();
+    renderList();
+  }
+
+  function frame() {
+    const s = state, d = Math.max(s.L, s.W, s.H * 2.2) * 1.55;
+    controls.target.set(0, s.H * 0.45, 0);
+    camera.position.set(-0.8 * d, 0.62 * d, -0.95 * d);
+    camera.near = d / 200; camera.far = d * 20; camera.updateProjectionMatrix();
+    controls.update();
+  }
+
+  function applySel() {
+    layers.forEach((l, i) => {
+      const on = sel == null || sel === i;
+      l.mat.opacity = on ? l.baseOp : 0.07;
+      l.mat.transparent = !on || l.baseOp < 1;
+      l.mat.depthWrite = on;
+      l.mat.needsUpdate = true;
+    });
+    $('lyrs').querySelectorAll('.lyr').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.i === sel)));
+    draw();
+  }
+
+  function renderList() {
+    let h = '', g = '';
+    layers.forEach((l, i) => {
+      if (l.group !== g) { g = l.group; h += `<div class="gh">${g}</div>`; }
+      h += `<button type="button" class="lyr" data-i="${i}" aria-pressed="${sel === i}"><b>${i + 1}</b><i style="background:#${l.color.toString(16).padStart(6, '0')}"></i><span>${l.name}<small>${l.desc}</small></span></button>`;
+    });
+    $('lyrs').innerHTML = h;
+  }
+  $('lyrs').addEventListener('click', e => { const b = e.target.closest('.lyr'); if (!b) return; const i = +b.dataset.i; sel = sel === i ? null : i; applySel(); });
+
+  // Hover and click-to-isolate on the model
+  const ray = new T.Raycaster(), mv = new T.Vector2();
+  let downAt = null, hoverPending = false, lastEv = null;
+  function pick(ev) {
+    const r = renderer.domElement.getBoundingClientRect();
+    mv.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(mv, camera);
+    const hits = root ? ray.intersectObjects(root.children, false) : [];
+    const hit = hits.find(h => sel == null || sel === h.object.userData.layer);
+    return hit ? hit.object.userData.layer : null;
+  }
+  renderer.domElement.addEventListener('pointermove', ev => {
+    lastEv = ev;
+    if (hoverPending || ev.buttons) { if (ev.buttons) $('v3tip').hidden = true; return; }
+    hoverPending = true;
+    requestAnimationFrame(() => {
+      hoverPending = false;
+      const i = pick(lastEv), tip = $('v3tip');
+      if (i == null) { tip.hidden = true; return; }
+      const l = layers[i];
+      tip.innerHTML = `<h4>${i + 1}. ${l.name}</h4><div style="color:var(--ink-2)">${l.desc}</div>`;
+      tip.hidden = false;
+      const r = host.getBoundingClientRect();
+      let x = lastEv.clientX - r.left + 14; if (x + 220 > r.width) x = lastEv.clientX - r.left - 230;
+      tip.style.left = Math.max(0, x) + 'px'; tip.style.top = Math.max(0, lastEv.clientY - r.top + 12) + 'px';
+    });
+  });
+  renderer.domElement.addEventListener('pointerleave', () => { $('v3tip').hidden = true; });
+  renderer.domElement.addEventListener('pointerdown', ev => { downAt = [ev.clientX, ev.clientY]; });
+  renderer.domElement.addEventListener('pointerup', ev => {
+    if (!downAt || Math.hypot(ev.clientX - downAt[0], ev.clientY - downAt[1]) > 4) return;
+    const i = pick(ev); sel = (i == null || sel === i) ? null : i; applySel();
+  });
+
+  function resize() {
+    const w = host.clientWidth, h = host.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix(); draw();
+  }
+  new ResizeObserver(resize).observe(host);
+
+  $('cut').addEventListener('change', e => { view.cut = e.target.checked; render3d(); });
+  $('v3reset').addEventListener('click', () => { frame(); draw(); });
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  (mq.addEventListener ? mq.addEventListener('change', setBg) : mq.addListener(setBg));
+  new MutationObserver(setBg).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  window.render3d = function () {
+    const s = state;
+    const key = JSON.stringify([s.L, s.W, s.H, s.pitch, s.ov, s.fwH, s.walls, s.wt, s.floor, view.cut]);
+    if (key === lastKey) return;
+    lastKey = key;
+    rebuild();
+    if (!framedFor) { framedFor = 'done'; frame(); }
+    setBg();
+  };
+  resize();
+  window.render3d();
+})();
+</script>
+</body>
+</html>
