@@ -1,22 +1,36 @@
 <!doctype html>
-
 <html lang="en">
 <head>
-	<meta charset="utf-8">
-	<title>Tje</title>
-	<meta name="description" content="je">
-	<meta name="author" content="blah">
-	<link rel="stylesheet" href="css/styles.css?v=1.0">
-	<!--[if lt IE 9]>
-		<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-	<![endif]-->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Priit Vain – Apps</title>
+  <meta name="description" content="Android apps by Priit Vain.">
+  <style>
+    :root { color-scheme: light dark; --bg: #ffffff; --fg: #1f2421; --muted: #5b6660; --accent: #1b5e3a; --line: #e3e8e5; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #121614; --fg: #e3e8e5; --muted: #9aa59f; --accent: #7cc49b; --line: #2a312d; } }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 680px; margin: 0 auto; padding: 48px 16px 64px; }
+    h1 { font-size: 1.8rem; margin: 0 0 4px; }
+    .lead { color: var(--muted); margin: 0 0 32px; }
+    .app { padding: 20px 0; border-top: 1px solid var(--line); }
+    .app h2 { font-size: 1.2rem; margin: 0 0 4px; }
+    .app p { margin: 0 0 8px; }
+    a { color: var(--accent); }
+    footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.95rem; }
+  </style>
 </head>
-
 <body>
-	<input type="file" id="fileinput" multiple/>
-	<pre>
-		<div id="tere"></div>
-	</pre>
-	<script src="script.js"></script>
+<main>
+  <h1>Priit Vain</h1>
+  <p class="lead">Android apps, made in Tallinn.</p>
+
+  <section class="app">
+    <h2>Solitaire</h2>
+    <p>Classic Klondike solitaire. No ads, no tracking, just cards.</p>
+    <a href="solitaire/privacy.html">Privacy policy</a>
+  </section>
+
+  <footer>Contact: <a href="mailto:apps@priitv.dev">apps@priitv.dev</a></footer>
+</main>
 </body>
 </html>
