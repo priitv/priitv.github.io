@@ -721,6 +721,8 @@ syncInputs(); render();
     // Rebuilt porch: three outer sides. PF = its front (scene x = px0), PL / PR = its ends (scene z = pz0 / pz1).
     const PR_ = MODEL.porch, px0 = PR_[2], pz0 = PR_[0], pz1 = PR_[1], pzc = (pz0 + pz1) / 2, pwh = (pz1 - pz0) / 2;
     holes.PF = []; holes.PL = []; holes.PR = [];
+    // Cutaway for the porch: its end facing the rooms (PL) is left out and each layer starts a little further along z.
+    const pstep = cut ? 0.12 : 0, pzStart = (k, base) => base + k * pstep;
     if (s.porch) for (const o of MODEL.openings) if (o.side === 'porch') {
       if (o.y0 <= px0 + 0.01) holes.PF.push([o.x0, o.x1, o.z0, o.z1]);
       else holes[o.x0 < pzc ? 'PL' : 'PR'].push([o.y0, o.y1, o.z0, o.z1]);
@@ -808,10 +810,10 @@ syncInputs(); render();
         if (ly.gable && s.roof && view.roof) for (const sd of (cut ? ['B'] : ['B', 'F'])) gable(l, sd, bu0, bu1, ly.s0, ly.s1);
         if (s.porch) {
           const pu = (strad || inner) ? -ly.s1 : -ly.s0, pe = (strad || inner) ? ly.y1 ?? H : yEnd;
-          run(l, 'PF', pz0 + bu0, pz1 - bu0, ly.s0, ly.s1, y0, pe, ly.kind, o);
-          run(l, 'PL', px0 + pu, 0, ly.s0, ly.s1, y0, pe, ly.kind, o);
+          run(l, 'PF', pzStart(k, pz0 + bu0), pz1 - bu0, ly.s0, ly.s1, y0, pe, ly.kind, o);
+          if (!cut) run(l, 'PL', px0 + pu, 0, ly.s0, ly.s1, y0, pe, ly.kind, o);
           run(l, 'PR', px0 + pu, 0, ly.s0, ly.s1, y0, pe, ly.kind, o);
-          if (ly.gable && s.roof && view.roof && tn > 0.02) {
+          if (ly.gable && s.roof && view.roof && tn > 0.02 && !cut) {
             const a = pz0 + bu0, b = pz1 - bu0;
             l.shapes.push({ pts: [[a, H], [b, H], [pzc, H + (pwh - bu0) * tn]], px: px0 - ly.s0, depth: ly.s1 - ly.s0 });
           }
@@ -825,61 +827,60 @@ syncInputs(); render();
       { name: 'Hüdroisolatsioon', color: 0x2a2a2a, desc: 'Bitumen strip on top of the foundation, under the wall', s0: -0.2, s1: 0, y0: -0.006, y1: 0, kind: 'solid' },
     ]);
 
-    // Floor, inside the exterior walls
-    const fx0 = 0.2, fx1 = W - 0.2, fz1 = L - 0.2;
-    const flo = (k) => zStart(k, 0.2);
-    if (s.newFloor && s.floor === 'concrete') {
-      const fl = [
-        ['Killustik 16-32', 0x8f918c, '150 mm crushed stone', -0.556, -0.406],
-        ['Täiteliiv', 0xd6bd86, '100 mm fill sand, compacted', -0.406, -0.306],
-        ['Geotekstiil', 0xece6d6, 'Separates sand from insulation', -0.306, -0.302],
-        ['Soojustus EPS 100, kiht 1', 0xf2f1ec, '100 mm', -0.302, -0.202],
-        ['Soojustus EPS 100, kiht 2', 0xe2e1da, '100 mm, joints staggered', -0.202, -0.102],
-        ['Ehituskile 0.2 mm', 0x5aa7d8, 'Moisture barrier under the slab', -0.102, -0.099, 0.6],
-      ];
-      fl.forEach(([n, c, d, y0, y1, op], k) => { const l = mk('Floor', n, c, d, { op }); box(l, fx0, fx1, y0, y1, flo(k), fz1); });
-      let k = fl.length;
-      const mesh = mk('Floor', 'Armatuurvõrk 8 mm 150×150', 0x4a4d50, 'On chairs (kandurid), ~30 mm above the film');
-      for (let x = fx0 + 0.05; x < fx1; x += 0.15) box(mesh, x, x + 0.008, -0.07, -0.062, flo(k), fz1);
-      for (let z = flo(k); z < fz1; z += 0.15) box(mesh, fx0, fx1, -0.062, -0.054, z, z + 0.008);
-      k++;
-      const pipe = mk('Floor', 'Põrandaküttetoru 16-20 mm', 0xd6453d, 'Tied to the mesh, 200 mm spacing');
-      for (let x = fx0 + 0.1; x < fx1 - 0.05; x += 0.2) box(pipe, x, x + 0.018, -0.054, -0.036, flo(k), fz1 - 0.1);
-      k++;
-      const strip = mk('Floor', 'Äärelint', 0x6b8fb3, 'Expansion strip against the walls');
-      box(strip, fx0, fx0 + 0.01, -0.1, 0, flo(k), fz1); box(strip, fx1 - 0.01, fx1, -0.1, 0, flo(k), fz1); box(strip, fx0, fx1, -0.1, 0, fz1 - 0.01, fz1);
-      k++;
-      const conc = mk('Floor', 'Betoon C25/30', 0xb8b8b2, '100 mm slab; pipes and mesh end up inside it');
-      box(conc, fx0 + 0.01, fx1 - 0.01, -0.1, 0, flo(k), fz1 - 0.01);
-    } else if (s.newFloor) {
-      let k = 0;
-      const joist = mk('Floor', 'Karkassipruss 50×200', 0xc99b5c, 'Floor joists across the width, 450 mm spacing');
-      const zj = [];
-      for (let z = flo(k); z < fz1 - 0.05; z += 0.45) zj.push(z);
-      zj.push(fz1 - 0.05);
-      for (const z of zj) box(joist, fx0, fx1, -0.246, -0.046, z, z + 0.05);
-      k++;
-      const wool = mk('Floor', 'Kivivill 200 mm', 0xa9b38f, 'Between the joists');
-      box(wool, fx0, fx1, -0.245, -0.047, flo(k), fz1);
-      k++;
-      const boards = mk('Floor', 'Aluslaudis 22×100', 0xdcb886, 'Boards on the joists with slots for the pipes');
-      for (let x = fx0; x < fx1 - 0.1; x += 0.2) { box(boards, x, x + 0.085, -0.046, -0.024, flo(k), fz1); box(boards, x + 0.115, x + 0.2, -0.046, -0.024, flo(k), fz1); }
-      k++;
-      const pipe = mk('Floor', 'Põrandaküttetoru', 0xd6453d, 'In the slots between boards');
-      for (let x = fx0 + 0.091; x < fx1 - 0.1; x += 0.2) box(pipe, x, x + 0.018, -0.044, -0.026, flo(k), fz1 - 0.1);
-      k++;
-      const plates = mk('Floor', 'Soojusjaotusplaat 150 mm', 0xaab1b8, 'Aluminium spreader plates over the pipes');
-      for (let x = fx0 + 0.025; x < fx1 - 0.15; x += 0.2) box(plates, x, x + 0.15, -0.024, -0.022, flo(k), fz1);
-      k++;
-      const osb = mk('Floor', 'OSB-3 22 mm', 0xc8955a, 'Top board, finished floor goes on this');
-      box(osb, fx0, fx1, -0.022, 0, flo(k), fz1);
+    // Floor, inside the exterior walls; the same layers again inside the rebuilt porch's foundation.
+    // Layers are made on first use, so the house and the porch share one entry each in the list.
+    const FL = {};
+    const fmk = (n, c, d, o) => FL[n] || (FL[n] = mk('Floor', n, c, d, o));
+    function drawFloor(fx0, fx1, flo, fz1) {
+      if (s.newFloor && s.floor === 'concrete') {
+        const fl = [
+          ['Killustik 16-32', 0x8f918c, '150 mm crushed stone', -0.556, -0.406],
+          ['Täiteliiv', 0xd6bd86, '100 mm fill sand, compacted', -0.406, -0.306],
+          ['Geotekstiil', 0xece6d6, 'Separates sand from insulation', -0.306, -0.302],
+          ['Soojustus EPS 100, kiht 1', 0xf2f1ec, '100 mm', -0.302, -0.202],
+          ['Soojustus EPS 100, kiht 2', 0xe2e1da, '100 mm, joints staggered', -0.202, -0.102],
+          ['Ehituskile 0.2 mm', 0x5aa7d8, 'Moisture barrier under the slab', -0.102, -0.099, 0.6],
+        ];
+        fl.forEach(([n, c, d, y0, y1, op], k) => { const l = fmk(n, c, d, { op }); box(l, fx0, fx1, y0, y1, flo(k), fz1); });
+        let k = fl.length;
+        const mesh = fmk('Armatuurvõrk 8 mm 150×150', 0x4a4d50, 'On chairs (kandurid), ~30 mm above the film');
+        for (let x = fx0 + 0.05; x < fx1; x += 0.15) box(mesh, x, x + 0.008, -0.07, -0.062, flo(k), fz1);
+        for (let z = flo(k); z < fz1; z += 0.15) box(mesh, fx0, fx1, -0.062, -0.054, z, z + 0.008);
+        k++;
+        const pipe = fmk('Põrandaküttetoru 16-20 mm', 0xd6453d, 'Tied to the mesh, 200 mm spacing');
+        for (let x = fx0 + 0.1; x < fx1 - 0.05; x += 0.2) box(pipe, x, x + 0.018, -0.054, -0.036, flo(k), fz1 - 0.1);
+        k++;
+        const strip = fmk('Äärelint', 0x6b8fb3, 'Expansion strip against the walls');
+        box(strip, fx0, fx0 + 0.01, -0.1, 0, flo(k), fz1); box(strip, fx1 - 0.01, fx1, -0.1, 0, flo(k), fz1); box(strip, fx0, fx1, -0.1, 0, fz1 - 0.01, fz1);
+        k++;
+        const conc = fmk('Betoon C25/30', 0xb8b8b2, '100 mm slab; pipes and mesh end up inside it');
+        box(conc, fx0 + 0.01, fx1 - 0.01, -0.1, 0, flo(k), fz1 - 0.01);
+      } else if (s.newFloor) {
+        let k = 0;
+        const joist = fmk('Karkassipruss 50×200', 0xc99b5c, 'Floor joists across the width, 450 mm spacing');
+        const zj = [];
+        for (let z = flo(k); z < fz1 - 0.05; z += 0.45) zj.push(z);
+        zj.push(fz1 - 0.05);
+        for (const z of zj) box(joist, fx0, fx1, -0.246, -0.046, z, z + 0.05);
+        k++;
+        const wool = fmk('Kivivill 200 mm', 0xa9b38f, 'Between the joists');
+        box(wool, fx0, fx1, -0.245, -0.047, flo(k), fz1);
+        k++;
+        const boards = fmk('Aluslaudis 22×100', 0xdcb886, 'Boards on the joists with slots for the pipes');
+        for (let x = fx0; x < fx1 - 0.1; x += 0.2) { box(boards, x, x + 0.085, -0.046, -0.024, flo(k), fz1); box(boards, x + 0.115, x + 0.2, -0.046, -0.024, flo(k), fz1); }
+        k++;
+        const pipe = fmk('Põrandaküttetoru', 0xd6453d, 'In the slots between boards');
+        for (let x = fx0 + 0.091; x < fx1 - 0.1; x += 0.2) box(pipe, x, x + 0.018, -0.044, -0.026, flo(k), fz1 - 0.1);
+        k++;
+        const plates = fmk('Soojusjaotusplaat 150 mm', 0xaab1b8, 'Aluminium spreader plates over the pipes');
+        for (let x = fx0 + 0.025; x < fx1 - 0.15; x += 0.2) box(plates, x, x + 0.15, -0.024, -0.022, flo(k), fz1);
+        k++;
+        const osb = fmk('OSB-3 22 mm', 0xc8955a, 'Top board, finished floor goes on this');
+        box(osb, fx0, fx1, -0.022, 0, flo(k), fz1);
+      }
     }
-
-    // Floor under the rebuilt porch: repeat the full-width layers (slab, insulation, boards) inside its foundation.
-    if (s.porch && s.newFloor) for (const l of out) if (l.group === 'Floor') {
-      const slab = l.boxes.find(b => b[3] > W * 0.8 && b[5] > 1);
-      if (slab) box(l, px0 + 0.2, -0.2, slab[1] - slab[4] / 2, slab[1] + slab[4] / 2, pz0 + 0.2, pz1 - 0.2);
-    }
+    drawFloor(0.2, W - 0.2, k => zStart(k, 0.2), L - 0.2);
+    if (s.porch) drawFloor(px0 + 0.2, -0.2, k => pzStart(k, pz0 + 0.2), pz1 - 0.2);
 
     // Exterior walls (inside → out)
     const t = s.wt === 250 ? 0.2 : s.wt / 1000;
@@ -925,14 +926,31 @@ syncInputs(); render();
         l.boxes.push([(x0 + x1) / 2, y, pz0 + dz, x1 - x0, o1 - o0, a1 - a0, -th, 1]);
         l.boxes.push([(x0 + x1) / 2, y, pz1 - dz, x1 - x0, o1 - o0, a1 - a0, th, 1]);
       };
+      // In cutaway mode each porch-roof layer starts further back from the porch front.
+      const pxs = (k, base) => cut ? Math.max(base, px0 - po + k * 0.3) : base;
       const pr = mk('Porch roof', 'Sarikad 50×200', 0xd4a466, 'Porch rafters at 600 mm');
-      for (let x = px0; x < xe1 - 0.05; x += 0.6) pbox(pr, 0, Sp, 0, 0.2, x, x + 0.05);
+      for (let x = px0; x < xe1 - 0.05; x += 0.6) if (x >= pxs(0, px0)) pbox(pr, 0, Sp, 0, 0.2, x, x + 0.05);
       const pw_ = mk('Porch roof', 'Klaasvill 150 mm', 0xf0cf5e, 'Between the porch rafters');
-      pbox(pw_, po / cs, Sp, 0.002, 0.15, px0, xe1);
+      pbox(pw_, po / cs, Sp, 0.002, 0.15, pxs(1, px0), xe1);
       const pl = mk('Porch roof', 'Aluskate + roovitus', 0x3b6d8f, 'Underlay, counter battens and battens, as on the main roof', { op: 0.85 });
-      pbox(pl, 0, Sp, 0.2, 0.287, xe0, xe1);
-      const ps = mk('Porch roof', 'Trapetsplekk T20', 0x4c5258, 'Profiled steel sheet, tucked under the main roof');
-      pbox(ps, -0.03, Sp + 0.03, 0.287, 0.307, xe0, xe1);
+      pbox(pl, 0, Sp, 0.2, 0.287, pxs(2, xe0), xe1);
+      const ps = mk('Porch roof', 'Trapetsplekk T20', 0x4c5258, 'Profiled steel sheet; ends where it meets the main roof');
+      pbox(ps, -0.03, Sp + 0.03, 0.287, 0.307, pxs(3, xe0), xe1);
+      // Flashings: the two valleys where the porch slopes meet the main roof, and the porch ridge.
+      // Both planes are y = H + run·tan + o/cos, so for equal pitch the valley is the line x = z − pz0 (and its mirror).
+      const fl = mk('Porch roof', 'Neelu- ja harjaplekk', 0x353a40, 'Valley flashings where the porch roof meets the main roof, and the porch ridge. Priced in the roof flashings line');
+      const yo = 0.31 / cs, wv = 0.25, tris = [];
+      const P = (x, z) => [x, H + x * tn + yo, z];
+      for (const sgn of [1, -1]) {
+        // from where the porch eave meets the main eave up to the porch ridge
+        const ze = sgn > 0 ? pz0 : pz1, a = [-po, ze - sgn * po], b = [pwh, ze + sgn * pwh];
+        const A = P(...a), B = P(...b);
+        const m0 = P(a[0], a[1] - sgn * wv), m1 = P(b[0], b[1] - sgn * wv);           // main-roof side, along z
+        const p0 = [a[0] - wv, A[1], a[1]], p1 = [b[0] - wv, B[1], b[1]];             // porch side, along x
+        tris.push([A, B, m1], [A, m1, m0], [A, p0, p1], [A, p1, B]);
+      }
+      fl.tris = tris;
+      box(fl, pxs(4, xe0), pwh, H + pwh * tn + yo - 0.01, H + pwh * tn + yo + 0.03, pzc - 0.12, pzc + 0.12);
     }
     // Roof (inside → out). a runs along the slope from the eave, o is offset perpendicular to the slope.
     const S = (W / 2 + ov) / cs;
@@ -997,6 +1015,13 @@ syncInputs(); render();
         im.instanceMatrix.needsUpdate = true;
         im.userData.layer = i;
         root.add(im);
+      }
+      if (l.tris && l.tris.length) {
+        const g = new T.BufferGeometry();
+        g.setAttribute('position', new T.Float32BufferAttribute(l.tris.flat(2), 3));
+        g.computeVertexNormals();
+        const m = new T.Mesh(g, l.mat); m.userData.layer = i;
+        root.add(m);
       }
       for (const sh of l.shapes) {
         const shape = new T.Shape(sh.pts.map(([x, y]) => new T.Vector2(x, y)));
