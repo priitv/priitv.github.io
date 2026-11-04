@@ -1018,12 +1018,27 @@ syncInputs(); render();
     }
     // Roof (inside → out). a runs along the slope from the eave, o is offset perpendicular to the slope.
     const S = (W / 2 + ov) / cs;
-    const sbox = (l, a0, a1, o0, o1, z0, z1) => {
+    const one = (l, a0, a1, o0, o1, z0, z1, side) => {
       if (a1 - a0 <= 1e-6 || z1 - z0 <= 1e-6) return;
       const am = (a0 + a1) / 2, om = (o0 + o1) / 2;
       const dx = -ov + am * cs - om * sn, y = (H - ov * tn) + am * sn + om * cs;
-      l.boxes.push([dx, y, (z0 + z1) / 2, a1 - a0, o1 - o0, z1 - z0, th]);
-      l.boxes.push([W - dx, y, (z0 + z1) / 2, a1 - a0, o1 - o0, z1 - z0, -th]);
+      l.boxes.push(side > 0 ? [dx, y, (z0 + z1) / 2, a1 - a0, o1 - o0, z1 - z0, th] : [W - dx, y, (z0 + z1) / 2, a1 - a0, o1 - o0, z1 - z0, -th]);
+    };
+    // Under the porch roof the main roof is opened up: its outer layers (cut = true) leave out the area between
+    // the two valleys, z ∈ (pz0 + x, pz1 − x) on the porch side, taken in thin strips up the slope.
+    const PO = Math.min(ov, 0.3), cutPorch = s.porch && tn > 0.02;
+    const sbox = (l, a0, a1, o0, o1, z0, z1, cut = false) => {
+      one(l, a0, a1, o0, o1, z0, z1, -1);
+      if (!cut || !cutPorch || z1 <= pz0 - PO || z0 >= pz1 + PO) return one(l, a0, a1, o0, o1, z0, z1, 1);
+      const xAt = a => -ov + a * cs - o0 * sn, aTop = (pwh + ov + o0 * sn) / cs, da = 0.05;
+      let a = a0;
+      for (; a < Math.min(a1, aTop) - 1e-9; a += da) {
+        const b = Math.min(a + da, a1), x = Math.max(xAt(b), -PO), h0 = pz0 + x, h1 = pz1 - x;
+        if (h1 <= h0) { one(l, a, b, o0, o1, z0, z1, 1); continue; }
+        one(l, a, b, o0, o1, z0, Math.min(z1, h0), 1);
+        one(l, a, b, o0, o1, Math.max(z0, h1), z1, 1);
+      }
+      if (a < a1) one(l, a, a1, o0, o1, z0, z1, 1);
     };
     const rafterZ = k => { const zs = []; for (let z = 0; z < L - 0.05; z += 0.6) zs.push(z); zs.push(L - 0.05); return zs.filter(z => z >= zStart(k, 0)); };
     const rz = k => zStart(k, -ov), rzEnd = L + ov;
@@ -1038,17 +1053,17 @@ syncInputs(); render();
     sbox(rw, ov / cs, S + 0.075 * tn, 0.002, 0.15, zStart(k, 0), L);
     k++;
     const ul = mk('Roof', 'Aluskate (katusekile)', 0x3b6d8f, 'Underlay on top of the rafters', { op: 0.85 });
-    sbox(ul, 0, S + 0.202 * tn, 0.2, 0.205, rz(k), rzEnd);
+    sbox(ul, 0, S + 0.202 * tn, 0.2, 0.205, rz(k), rzEnd, true);
     k++;
     const cb = mk('Roof', 'Tuulutusliist 32×100', 0xb98d55, 'Counter battens over each rafter, ventilation gap');
-    for (const z of rafterZ(k)) sbox(cb, 0, S + 0.22 * tn, 0.205, 0.237, z, z + 0.05);
+    for (const z of rafterZ(k)) sbox(cb, 0, S + 0.22 * tn, 0.205, 0.237, z, z + 0.05, true);
     k++;
     const bat = mk('Roof', 'Roovitus 50×50', 0xc79d63, 'Battens across the rafters at 350 mm');
-    for (let a = 0.03; a < S - 0.02; a += 0.35) sbox(bat, a, a + 0.05, 0.237, 0.287, rz(k), rzEnd);
+    for (let a = 0.03; a < S - 0.02; a += 0.35) sbox(bat, a, a + 0.05, 0.237, 0.287, rz(k), rzEnd, true);
     k++;
     const steel = mk('Roof', 'Trapetsplekk T20', 0x4c5258, 'Profiled steel sheet; ribs every 200 mm');
-    sbox(steel, -0.03, S + 0.29 * tn, 0.287, 0.292, rz(k), rzEnd);
-    for (let z = rz(k); z < rzEnd - 0.03; z += 0.2) sbox(steel, -0.03, S + 0.3 * tn, 0.292, 0.307, z, z + 0.03);
+    sbox(steel, -0.03, S + 0.29 * tn, 0.287, 0.292, rz(k), rzEnd, true);
+    for (let z = rz(k); z < rzEnd - 0.03; z += 0.2) sbox(steel, -0.03, S + 0.3 * tn, 0.292, 0.307, z, z + 0.03, true);
     k++;
     if (tn > 0.02) {
       const rid = mk('Roof', 'Harjaplekk', 0x353a40, 'Ridge flashing; eave, gable and valley flashings are in the same price line');
