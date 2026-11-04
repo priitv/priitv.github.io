@@ -880,7 +880,7 @@ syncInputs(); render();
       }
     }
     drawFloor(0.2, W - 0.2, k => zStart(k, 0.2), L - 0.2);
-    if (s.porch) drawFloor(px0 + 0.2, -0.2, k => pzStart(k, pz0 + 0.2), pz1 - 0.2);
+    if (s.porch) drawFloor(px0 + 0.2, 0, k => pzStart(k, pz0 + 0.2), pz1 - 0.2);   // up to the house foundation's outer face
 
     // Exterior walls (inside → out)
     const t = s.wt === 250 ? 0.2 : s.wt / 1000;
@@ -934,15 +934,17 @@ syncInputs(); render();
         l.tris = l.tris || [];
         const quad = (p, q, r, t) => l.tris.push([p, q, r], [p, r, t]);
         for (const sg of [1, -1]) {
-          const ring = o => [W3(sg, x0, a0, o), W3(sg, xv(a0, o), a0, o), W3(sg, xv(a1, o), a1, o), W3(sg, x0, a1, o)];
+          // a layer that reaches the ridge runs on by o·tan so its face meets the other slope's on the ridge line
+          const top = o => a1 >= Sp - 1e-6 ? Sp + o * tn : a1;
+          const ring = o => [W3(sg, x0, a0, o), W3(sg, xv(a0, o), a0, o), W3(sg, xv(top(o), o), top(o), o), W3(sg, x0, top(o), o)];
           const lo = ring(o0), hi = ring(o1);
           quad(...lo); quad(...hi);
           for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; quad(lo[i], lo[j], hi[j], hi[i]); }
         }
       };
       const palong = (l, x, w, o0, o1, a1) => {          // member running down the slope at x, stopped at the valley
-        const a0 = Math.max(0, (x + w + po + o1 * sn) / cs);
-        if (a0 < a1) pbox(l, a0, a1, o0, o1, x, x + w);
+        const a0 = Math.max(0, (x + w + po + o1 * sn) / cs), at = a1 >= Sp - 1e-6 ? Sp + (o0 + o1) / 2 * tn : a1;
+        if (a0 < at) pbox(l, a0, at, o0, o1, x, x + w);
       };
       // In cutaway mode each porch-roof layer starts further back from the porch front.
       const pxs = (k, base) => cut ? Math.max(base, px0 - po + k * 0.3) : base;
