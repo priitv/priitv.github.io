@@ -926,20 +926,43 @@ syncInputs(); render();
         l.boxes.push([(x0 + x1) / 2, y, pz0 + dz, x1 - x0, o1 - o0, a1 - a0, -th, 1]);
         l.boxes.push([(x0 + x1) / 2, y, pz1 - dz, x1 - x0, o1 - o0, a1 - a0, th, 1]);
       };
+      // Each slope is cut at the valley, where it meets the main roof: for equal pitch the valley is x = z − pz0
+      // (mirrored on the other side), so at slope position a and offset o it lies at x = −po + a·cos − o·sin.
+      const xv = (a, o) => Math.min(xe1, -po + a * cs - o * sn);
+      const W3 = (sg, x, a, o) => [x, H - po * tn + a * sn + o * cs, sg > 0 ? pz0 - po + a * cs - o * sn : pz1 + po - a * cs + o * sn];
+      const pslab = (l, a0, a1, o0, o1, x0) => {        // slab clipped at the valley, as triangles
+        l.tris = l.tris || [];
+        const quad = (p, q, r, t) => l.tris.push([p, q, r], [p, r, t]);
+        for (const sg of [1, -1]) {
+          const ring = o => [W3(sg, x0, a0, o), W3(sg, xv(a0, o), a0, o), W3(sg, xv(a1, o), a1, o), W3(sg, x0, a1, o)];
+          const lo = ring(o0), hi = ring(o1);
+          quad(...lo); quad(...hi);
+          for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; quad(lo[i], lo[j], hi[j], hi[i]); }
+        }
+      };
+      const palong = (l, x, w, o0, o1, a1) => {          // member running down the slope at x, stopped at the valley
+        const a0 = Math.max(0, (x + w + po + o1 * sn) / cs);
+        if (a0 < a1) pbox(l, a0, a1, o0, o1, x, x + w);
+      };
       // In cutaway mode each porch-roof layer starts further back from the porch front.
       const pxs = (k, base) => cut ? Math.max(base, px0 - po + k * 0.3) : base;
-      const pr = mk('Porch roof', 'Sarikad 50×200', 0xd4a466, 'Porch rafters at 600 mm');
-      for (let x = px0; x < xe1 - 0.05; x += 0.6) if (x >= pxs(0, px0)) pbox(pr, 0, Sp, 0, 0.2, x, x + 0.05);
+      const pr = mk('Porch roof', 'Sarikad 50×200', 0xd4a466, 'Porch rafters at 600 mm, landing on the main roof at the valleys');
+      for (let x = px0; x < xe1 - 0.05; x += 0.6) if (x >= pxs(0, px0)) palong(pr, x, 0.05, 0, 0.2, Sp);
       const pw_ = mk('Porch roof', 'Klaasvill 150 mm', 0xf0cf5e, 'Between the porch rafters');
-      pbox(pw_, po / cs, Sp, 0.002, 0.15, pxs(1, px0), xe1);
-      const pl = mk('Porch roof', 'Aluskate + roovitus', 0x3b6d8f, 'Underlay, counter battens and battens, as on the main roof', { op: 0.85 });
-      pbox(pl, 0, Sp, 0.2, 0.287, pxs(2, xe0), xe1);
-      const ps = mk('Porch roof', 'Trapetsplekk T20', 0x4c5258, 'Profiled steel sheet; ends where it meets the main roof');
-      pbox(ps, -0.03, Sp + 0.03, 0.287, 0.307, pxs(3, xe0), xe1);
+      pslab(pw_, po / cs, Sp, 0.002, 0.15, pxs(1, px0));
+      const pul = mk('Porch roof', 'Aluskate', 0x3b6d8f, 'Underlay on the porch rafters', { op: 0.85 });
+      pslab(pul, 0, Sp, 0.2, 0.205, pxs(2, xe0));
+      const pcb = mk('Porch roof', 'Tuulutusliist 32×100', 0xb98d55, 'Counter battens over each porch rafter');
+      for (let x = px0; x < xe1 - 0.05; x += 0.6) if (x >= pxs(3, px0)) palong(pcb, x, 0.05, 0.205, 0.237, Sp);
+      const pbt = mk('Porch roof', 'Roovitus 50×50', 0xc79d63, 'Battens across the porch rafters at 350 mm');
+      for (let a = 0.03; a < Sp - 0.02; a += 0.35) { const x0 = pxs(4, xe0), x1 = xv(a + 0.05, 0.287); if (x1 > x0) pbox(pbt, a, a + 0.05, 0.237, 0.287, x0, x1); }
+      const ps = mk('Porch roof', 'Trapetsplekk T20', 0x4c5258, 'Profiled steel sheet; ribs every 200 mm, cut along the valleys');
+      pslab(ps, -0.03, Sp, 0.287, 0.292, pxs(5, xe0));
+      for (let x = pxs(5, xe0); x < xe1 - 0.03; x += 0.2) palong(ps, x, 0.03, 0.292, 0.307, Sp);
       // Flashings: the two valleys where the porch slopes meet the main roof, and the porch ridge.
       // Both planes are y = H + run·tan + o/cos, so for equal pitch the valley is the line x = z − pz0 (and its mirror).
-      const fl = mk('Porch roof', 'Neelu- ja harjaplekk', 0x353a40, 'Valley flashings where the porch roof meets the main roof, and the porch ridge. Priced in the roof flashings line');
-      const yo = 0.31 / cs, wv = 0.25, tris = [];
+      const fl = mk('Porch roof', 'Neelu- ja harjaplekk', 0x5d646b, 'Valley flashings where the porch roof meets the main roof, and the porch ridge. Priced in the roof flashings line');
+      const yo = 0.312 / cs, wv = 0.15, tris = [];
       const P = (x, z) => [x, H + x * tn + yo, z];
       for (const sgn of [1, -1]) {
         // from where the porch eave meets the main eave up to the porch ridge
@@ -950,7 +973,7 @@ syncInputs(); render();
         tris.push([A, B, m1], [A, m1, m0], [A, p0, p1], [A, p1, B]);
       }
       fl.tris = tris;
-      box(fl, pxs(4, xe0), pwh, H + pwh * tn + yo - 0.01, H + pwh * tn + yo + 0.03, pzc - 0.12, pzc + 0.12);
+      pslab(fl, Sp - 0.22, Sp, 0.307, 0.314, pxs(6, xe0));   // porch ridge, lying on both slopes
     }
     // Roof (inside → out). a runs along the slope from the eave, o is offset perpendicular to the slope.
     const S = (W / 2 + ov) / cs;
