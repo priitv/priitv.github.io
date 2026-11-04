@@ -236,7 +236,7 @@ svg .gridl { stroke: var(--rule); stroke-width: 1; }
           <div class="v3box"><div id="v3d"></div><div class="tip" id="v3tip" hidden></div></div>
           <div class="lyrs" id="lyrs"></div>
         </div>
-        <p class="note">Drag to orbit, scroll or pinch to zoom, right-drag to pan. The first group is the house as drawn in Fusion; the new layers follow in build order. In cutaway mode the end wall by the rooms is left out and each new layer starts a little further back. Click a layer to isolate it; untick Roof to look into the rooms. Openings are cut where the model has them; window and door units are not drawn.</p>
+        <p class="note">Drag to orbit, scroll or pinch to zoom, right-drag to pan. The first group is the house as drawn in Fusion; the new layers follow in build order. In cutaway mode the end wall by the rooms is left out and each new layer starts a little further back. Click a layer to isolate it; untick Roof to look into the rooms. Openings are cut where the model has them; the window, door and gate units are simple stand-ins sized to each opening.</p>
       </section>
 
       <section class="panel" aria-label="Measured in Fusion">
@@ -916,6 +916,45 @@ syncInputs(); render();
     }
     stack('Exterior walls', ws, true);
 
+    // Window and door units in the model's openings, set in the middle of the old wall line.
+    {
+      const nw = s.openings ? 'New' : 'Existing';
+      const fr = mk('Windows & doors', 'Raamid ja lengid', 0xf2efe8, `${nw} window frames, sashes and door frames`);
+      const gl = mk('Windows & doors', 'Klaas', 0x9fcbe0, 'Glazing', { op: 0.35 });
+      const dr = mk('Windows & doors', 'Uksed', 0x5fb3a3, `${nw} doors: the entrance, the porch door and the door to the barn`);
+      const gt = mk('Windows & doors', 'Väravad', 0x7a6248, 'Barn gates in both long walls, vertical boards on ledges');
+      const partDoor = o => o.side === 'inner' && MODEL.partition && o.x0 >= MODEL.partition[0] - 0.01 && o.x1 <= MODEL.partition[1] + 0.01;
+      const pmid = (MODEL.porch[0] + MODEL.porch[1]) / 2;
+      for (const o of MODEL.openings) {
+        if (!(EXT_SIDES.includes(o.side) || o.side === 'porch' || partDoor(o))) continue;
+        const along = (o.x1 - o.x0) >= (o.y1 - o.y0);   // wall runs along Fusion x
+        if (cut && o.side === 'end0') continue;          // that wall is cut away
+        if (cut && s.porch && o.side === 'porch' && !along && o.x0 < pmid) continue;
+        const c = along ? (o.y0 + o.y1) / 2 : (o.x0 + o.x1) / 2;
+        // u along the wall, d across it from the wall's middle, y up
+        const put = (l, u0, u1, d0, d1, y0, y1) => along ? box(l, c + d0, c + d1, y0, y1, u0, u1) : box(l, u0, u1, y0, y1, c + d0, c + d1);
+        const u0 = along ? o.x0 : o.y0, u1 = along ? o.x1 : o.y1, y0 = o.z0, y1 = o.z1, w = u1 - u0;
+        if (o.kind === 'window') {
+          const f = 0.06, d = 0.035;
+          put(fr, u0, u1, -d, d, y0, y0 + f); put(fr, u0, u1, -d, d, y1 - f, y1);
+          put(fr, u0, u0 + f, -d, d, y0 + f, y1 - f); put(fr, u1 - f, u1, -d, d, y0 + f, y1 - f);
+          const n = Math.max(1, Math.round(w / 0.6));    // sashes about 600 mm wide
+          for (let i = 1; i < n; i++) { const m = u0 + w * i / n; put(fr, m - 0.03, m + 0.03, -d, d, y0 + f, y1 - f); }
+          if (y1 - y0 > 1) { const m = y0 + (y1 - y0) * 0.7; put(fr, u0 + f, u1 - f, -d * 0.7, d * 0.7, m - 0.025, m + 0.025); }  // transom
+          put(gl, u0 + f, u1 - f, -0.004, 0.004, y0 + f, y1 - f);
+        } else if (o.kind === 'door') {
+          const f = 0.05;
+          put(fr, u0, u0 + f, -0.045, 0.045, y0, y1); put(fr, u1 - f, u1, -0.045, 0.045, y0, y1); put(fr, u0 + f, u1 - f, -0.045, 0.045, y1 - f, y1);
+          put(dr, u0 + f, u1 - f, -0.025, 0.025, y0, y1 - f);
+          for (const k of [0.25, 0.55, 0.85]) put(dr, u0 + f + 0.06, u1 - f - 0.06, -0.035, 0.035, y0 + (y1 - y0) * k - 0.12, y0 + (y1 - y0) * k + 0.12);  // panels
+        } else {
+          for (let u = u0; u < u1 - 0.01; u += 0.12) put(gt, u, Math.min(u + 0.11, u1), -0.02, 0.02, y0, y1);
+          put(gt, u0, u1, 0.02, 0.05, y0 + 0.2, y0 + 0.32); put(gt, u0, u1, 0.02, 0.05, y1 - 0.32, y1 - 0.2);
+          put(gt, (u0 + u1) / 2 - 0.005, (u0 + u1) / 2 + 0.005, -0.03, 0.06, y0, y1);   // gap between the two leaves
+        }
+      }
+    }
+
     if (!s.roof || !view.roof) return out;
     if (s.porch && tn > 0.02) {
       // Small gable roof over the porch, ridge running out from the house into the main roof. Boxes rotate about x (flag 1).
@@ -1143,7 +1182,7 @@ syncInputs(); render();
 
   window.render3d = function () {
     const s = state;
-    const key = JSON.stringify([s.porch, s.scope, s.walls, s.H, s.pitch, s.ov, s.fwH, s.wt, s.floor, s.found, s.newFloor, s.roof, s.inner, view.cut, view.roof]);
+    const key = JSON.stringify([s.openings, s.porch, s.scope, s.walls, s.H, s.pitch, s.ov, s.fwH, s.wt, s.floor, s.found, s.newFloor, s.roof, s.inner, view.cut, view.roof]);
     if (key === lastKey) return;
     lastKey = key;
     rebuild();
